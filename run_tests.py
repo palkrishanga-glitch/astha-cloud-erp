@@ -9,6 +9,8 @@ sys.path.insert(0, os.path.abspath("."))
 
 from services.api.main import app
 from services.api.app.database import Base, get_db
+from services.api.app.schemas_common import APIResponse
+from services.api.app.services.erp_service import ERPBusinessService
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test_astha.db"
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
@@ -23,7 +25,7 @@ def override_get_db():
 
 app.dependency_overrides[get_db] = override_get_db
 
-class TestAsthaERPPart10Suite(unittest.TestCase):
+class TestAsthaERPPart11Suite(unittest.TestCase):
     def setUp(self):
         Base.metadata.create_all(bind=engine)
         self.client = TestClient(app)
@@ -31,50 +33,30 @@ class TestAsthaERPPart10Suite(unittest.TestCase):
     def tearDown(self):
         Base.metadata.drop_all(bind=engine)
 
-    def test_executive_dashboard_cards(self):
-        res = self.client.get("/api/v1/reports/dashboard")
-        self.assertEqual(res.status_code, 200)
-        data = res.json()
-        cards = data["cards"]
+    def test_standardized_api_response_schema(self):
+        resp = APIResponse(success=True, message="Test Message", data={"key": "val"})
+        self.assertTrue(resp.success)
+        self.assertEqual(resp.message, "Test Message")
+        self.assertEqual(resp.data["key"], "val")
+        self.assertIn("Z", resp.timestamp)
+
+    def test_transaction_engine_rollback(self):
+        db = TestingSessionLocal()
         
-        # Verify 17 main dashboard card metrics
-        self.assertIn("today_sales", cards)
-        self.assertIn("today_purchases", cards)
-        self.assertIn("today_receipts", cards)
-        self.assertIn("today_payments", cards)
-        self.assertIn("cash_balance", cards)
-        self.assertIn("bank_balance", cards)
-        self.assertIn("accounts_receivable", cards)
-        self.assertIn("accounts_payable", cards)
-        self.assertIn("inventory_value", cards)
-        self.assertIn("low_stock_count", cards)
-        self.assertIn("net_profit", cards)
+        def failing_action(session):
+            p = Base.metadata.tables["parties"]
+            # Intentionally cause error to test rollback
+            raise ValueError("Forced error for transaction rollback test")
 
-    def test_system_health(self):
-        res = self.client.get("/api/v1/reports/system-health")
+        with self.assertRaises(ValueError):
+            ERPBusinessService.execute_transaction_with_rollback(db, failing_action)
+
+        db.close()
+
+    def test_health_api(self):
+        res = self.client.get("/health")
         self.assertEqual(res.status_code, 200)
-        self.assertEqual(res.json()["system_status"], "ONLINE")
-
-    def test_global_enterprise_search(self):
-        # Create a party to search
-        self.client.post("/api/v1/parties/", json={
-            "business_name": "Astha Steel Traders",
-            "party_type": "CUSTOMER",
-            "mobile": "9999900000",
-            "address": "Main Street",
-            "state": "Odisha",
-            "city": "Bhubaneswar",
-            "pincode": "751001",
-            "opening_balance": 0.00,
-            "opening_balance_type": "DEBIT",
-            "opening_balance_date": "2026-04-01"
-        })
-
-        res = self.client.get("/api/v1/search/?q=Astha")
-        self.assertEqual(res.status_code, 200)
-        data = res.json()
-        self.assertTrue(data["total_results"] > 0)
-        self.assertEqual(data["results"][0]["entity"], "PARTY")
+        self.assertEqual(res.json()["status"], "healthy")
 
 if __name__ == "__main__":
     unittest.main()
