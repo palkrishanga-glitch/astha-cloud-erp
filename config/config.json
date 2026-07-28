@@ -1,0 +1,21 @@
+{
+  "business": {
+    "name": "ASTHA BUILDERS & HARDWARE",
+    "gstin": "21AAAAA0000A1Z5",
+    "phone": "+91 98765 43210",
+    "email": "astha.hardware@gmail.com",
+    "address": "Hardware Yard, Industrial Area, Bhubaneswar, Odisha - 751001",
+    "currency": "INR",
+    "currency_symbol": "₹"
+  },
+  "database": {
+    "local_sqlite_path": "astha_erp.db",
+    "sync_interval_seconds": 60,
+    "pool_max_connections": 5
+  },
+  "pos": {
+    "default_printer_type": "THERMAL_3INCH",
+    "strict_credit_limit_block": false,
+    "auto_print_invoice": true
+  }
+}
