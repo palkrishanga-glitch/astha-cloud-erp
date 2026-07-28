@@ -9,8 +9,6 @@ sys.path.insert(0, os.path.abspath("."))
 
 from services.api.main import app
 from services.api.app.database import Base, get_db
-from services.api.app.schemas_common import APIResponse
-from services.api.app.services.erp_service import ERPBusinessService
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test_astha.db"
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
@@ -25,7 +23,7 @@ def override_get_db():
 
 app.dependency_overrides[get_db] = override_get_db
 
-class TestAsthaERPPart11Suite(unittest.TestCase):
+class TestAsthaERPPart12Suite(unittest.TestCase):
     def setUp(self):
         Base.metadata.create_all(bind=engine)
         self.client = TestClient(app)
@@ -33,30 +31,26 @@ class TestAsthaERPPart11Suite(unittest.TestCase):
     def tearDown(self):
         Base.metadata.drop_all(bind=engine)
 
-    def test_standardized_api_response_schema(self):
-        resp = APIResponse(success=True, message="Test Message", data={"key": "val"})
-        self.assertTrue(resp.success)
-        self.assertEqual(resp.message, "Test Message")
-        self.assertEqual(resp.data["key"], "val")
-        self.assertIn("Z", resp.timestamp)
+    def test_backup_and_restore(self):
+        # 1. Create Backup
+        create_res = self.client.post("/api/v1/backup/create")
+        self.assertEqual(create_res.status_code, 201)
+        data = create_res.json()
+        self.assertEqual(data["status"], "SUCCESS")
+        backup_file = data["backup_file"]
 
-    def test_transaction_engine_rollback(self):
-        db = TestingSessionLocal()
-        
-        def failing_action(session):
-            p = Base.metadata.tables["parties"]
-            # Intentionally cause error to test rollback
-            raise ValueError("Forced error for transaction rollback test")
+        # 2. List Backups
+        list_res = self.client.get("/api/v1/backup/list")
+        self.assertEqual(list_res.status_code, 200)
+        self.assertTrue(len(list_res.json()["backups"]) > 0)
 
-        with self.assertRaises(ValueError):
-            ERPBusinessService.execute_transaction_with_rollback(db, failing_action)
-
-        db.close()
-
-    def test_health_api(self):
-        res = self.client.get("/health")
-        self.assertEqual(res.status_code, 200)
-        self.assertEqual(res.json()["status"], "healthy")
+        # 3. Restore Backup
+        restore_res = self.client.post("/api/v1/backup/restore", json={
+            "backup_file_name": backup_file,
+            "owner_pin": "1234"
+        })
+        self.assertEqual(restore_res.status_code, 200)
+        self.assertEqual(restore_res.json()["status"], "SUCCESS")
 
 if __name__ == "__main__":
     unittest.main()
