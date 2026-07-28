@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from .app.database import engine, Base
-from .app.routers import auth, parties, sales, purchases, reports, search, sync
+from .app.routers import auth, parties, inventory, sales, purchases, reports, search, sync
 
 # Initialize Database Tables
 Base.metadata.create_all(bind=engine)
@@ -25,6 +25,7 @@ app.add_middleware(
 
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(parties.router, prefix="/api/v1")
+app.include_router(inventory.router, prefix="/api/v1")
 app.include_router(sales.router, prefix="/api/v1")
 app.include_router(purchases.router, prefix="/api/v1")
 app.include_router(reports.router, prefix="/api/v1")

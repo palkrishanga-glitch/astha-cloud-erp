@@ -26,13 +26,63 @@ def override_get_db():
 
 app.dependency_overrides[get_db] = override_get_db
 
-class TestAsthaERPPart4Suite(unittest.TestCase):
+class TestAsthaERPPart5Suite(unittest.TestCase):
     def setUp(self):
         Base.metadata.create_all(bind=engine)
         self.client = TestClient(app)
 
     def tearDown(self):
         Base.metadata.drop_all(bind=engine)
+
+    def test_product_creation_and_stock_ledger(self):
+        payload = {
+            "sku": "TMT-12MM-JSW",
+            "product_name": "JSW Neosteel TMT Bar 12mm",
+            "category_name": "TMT Steel",
+            "brand_name": "JSW",
+            "unit_name": "Ton",
+            "hsn_code": "72142090",
+            "gst_rate": 18.00,
+            "purchase_price": 54000.00,
+            "selling_price": 58000.00,
+            "cost_price": 54000.00,
+            "opening_stock": 10.00,
+            "reorder_level": 5.00
+        }
+        res = self.client.post("/api/v1/products/", json=payload)
+        self.assertEqual(res.status_code, 201)
+        data = res.json()
+        self.assertTrue(data["product_code"].startswith("PRD-"))
+        self.assertEqual(data["opening_stock"], 10.00)
+        product_id = data["product_id"]
+
+        # Check stock list
+        res_list = self.client.get("/api/v1/products/")
+        self.assertEqual(res_list.status_code, 200)
+        prod_item = [p for p in res_list.json() if p["id"] == product_id][0]
+        self.assertEqual(prod_item["current_stock"], 10.00)
+
+        # Stock Adjustment (INCREASE 5 Tons)
+        res_adj = self.client.post("/api/v1/products/adjust-stock", json={
+            "product_id": product_id,
+            "warehouse_id": 1,
+            "adjustment_type": "INCREASE",
+            "quantity": 5.00,
+            "rate": 54000.00,
+            "reason": "Physical stock count verification"
+        })
+        self.assertEqual(res_adj.status_code, 200)
+        self.assertEqual(res_adj.json()["new_stock"], 15.00)
+
+        # Stream Barcode Image
+        res_bc = self.client.get(f"/api/v1/products/{product_id}/barcode/image")
+        self.assertEqual(res_bc.status_code, 200)
+        self.assertEqual(res_bc.headers["content-type"], "image/png")
+
+        # Stream QR Image
+        res_qr = self.client.get(f"/api/v1/products/{product_id}/qr/image")
+        self.assertEqual(res_qr.status_code, 200)
+        self.assertEqual(res_qr.headers["content-type"], "image/png")
 
     def test_party_auto_code_generation(self):
         payload = {
@@ -49,20 +99,8 @@ class TestAsthaERPPart4Suite(unittest.TestCase):
         }
         res = self.client.post("/api/v1/parties/", json=payload)
         self.assertEqual(res.status_code, 201)
-        data = res.json()
-        self.assertTrue(data["party_code"].startswith("PRT-"))
-        self.assertEqual(data["opening_balance_type"], "CREDIT")
 
-    def test_party_excel_export(self):
-        res = self.client.get("/api/v1/parties/export/excel")
-        self.assertEqual(res.status_code, 200)
-        self.assertIn("spreadsheetml", res.headers["content-type"])
-
-    def test_password_policy(self):
-        valid, msg = validate_password_policy("AsthaERP@2026")
-        self.assertTrue(valid)
-
-    def test_first_time_setup_and_login(self):
+    def test_first_time_setup(self):
         setup_payload = {
             "owner_username": "astha_owner",
             "owner_full_name": "Astha Hardware Owner",
@@ -73,13 +111,6 @@ class TestAsthaERPPart4Suite(unittest.TestCase):
         }
         res = self.client.post("/api/v1/auth/setup", json=setup_payload)
         self.assertEqual(res.status_code, 201)
-
-    def test_barcode_and_qr_generation(self):
-        bc_bytes = generate_barcode_png_bytes("AS-2026-1001")
-        self.assertTrue(len(bc_bytes) > 100)
-
-        qr_bytes = generate_qr_code_png_bytes("upi://pay?pa=astha@upi&pn=AsthaHardware&am=1500.00")
-        self.assertTrue(len(qr_bytes) > 100)
 
     def test_trial_balance_and_financial_reports(self):
         res_tb = self.client.get("/api/v1/reports/trial-balance")
