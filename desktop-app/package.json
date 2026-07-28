@@ -1,0 +1,32 @@
+{
+  "name": "astha-erp-desktop",
+  "version": "2.0.0",
+  "description": "ASTHA ERP Enterprise — Astha Builders & Hardware",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win nsis"
+  },
+  "author": "Astha Builders & Hardware",
+  "license": "ISC",
+  "dependencies": {
+    "electron": "^28.0.0"
+  },
+  "devDependencies": {
+    "electron-builder": "^24.9.0"
+  },
+  "build": {
+    "appId": "com.astha.erp.enterprise",
+    "productName": "ASTHA ERP Enterprise",
+    "win": {
+      "target": "nsis",
+      "artifactName": "ASTHA_ERP_Setup.exe"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}
