@@ -23,7 +23,7 @@ def override_get_db():
 
 app.dependency_overrides[get_db] = override_get_db
 
-class TestAsthaERPPart13Suite(unittest.TestCase):
+class TestAsthaERPPart14Suite(unittest.TestCase):
     def setUp(self):
         Base.metadata.create_all(bind=engine)
         self.client = TestClient(app)
@@ -31,21 +31,37 @@ class TestAsthaERPPart13Suite(unittest.TestCase):
     def tearDown(self):
         Base.metadata.drop_all(bind=engine)
 
-    def test_ui_ux_design_system_and_templates(self):
-        res = self.client.get("/")
-        self.assertEqual(res.status_code, 200)
-        html = res.text
-        
-        # Verify Part 13 Design Tokens
-        self.assertIn("#2563EB", html) # Light Primary
-        self.assertIn("#3B82F6", html) # Dark Primary
-        self.assertIn("#0F172A", html) # Dark BG
-        self.assertIn("#1E293B", html) # Dark Surface
-        self.assertIn("#22C55E", html) # Dark Success
+    def test_cloud_sync_engine(self):
+        # 1. Register Device
+        reg_res = self.client.post("/api/v1/sync/register-device", json={
+            "device_id": "POS-COUNTER-01",
+            "computer_name": "Astha POS Terminal 1",
+            "os_name": "Windows 11 Enterprise",
+            "assigned_branch": "Bhubaneswar Main Branch"
+        })
+        self.assertEqual(reg_res.status_code, 201)
+        self.assertEqual(reg_res.json()["status"], "SUCCESS")
 
-        # Verify Keyboard Shortcuts
-        self.assertIn("ctrlKey", html)
-        self.assertIn("globalSearchInput", html)
+        # 2. Push Offline Sync Queue Batch
+        push_res = self.client.post("/api/v1/sync/push", json={
+            "device_id": "POS-COUNTER-01",
+            "batch": [
+                {
+                    "sync_id": "SYNC-001",
+                    "module": "SALES",
+                    "action": "CREATE",
+                    "payload": {"invoice_no": "INV-2026-000001", "total": 1500.00},
+                    "client_timestamp": "2026-07-28T13:34:00Z"
+                }
+            ]
+        })
+        self.assertEqual(push_res.status_code, 200)
+        self.assertEqual(push_res.json()["processed_count"], 1)
+
+        # 3. Pull Incremental Updates
+        pull_res = self.client.get("/api/v1/sync/pull?device_id=POS-COUNTER-01")
+        self.assertEqual(pull_res.status_code, 200)
+        self.assertEqual(pull_res.json()["status"], "SUCCESS")
 
 if __name__ == "__main__":
     unittest.main()

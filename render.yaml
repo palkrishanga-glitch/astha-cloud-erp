@@ -1,11 +1,17 @@
 services:
   - type: web
-    name: astha-cloud-erp
-    env: docker
-    plan: free
-    region: oregon
+    name: astha-cloud-erp-api
+    env: python
+    region: singapore
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn services.api.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
     envVars:
-      - key: DATABASE_URL
-        sync: false
-      - key: ASTHA_JWT_SECRET
+      - key: APP_ENV
+        value: production
+      - key: SECRET_KEY
         generateValue: true
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        value: sqlite:///./astha_erp.db
+    healthCheckPath: /health
