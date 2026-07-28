@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from .app.database import engine, Base
-from .app.routers import parties, sales, purchases, reports, search, sync
+from .app.routers import auth, parties, sales, purchases, reports, search, sync
 
 # Initialize Database Tables
 Base.metadata.create_all(bind=engine)
@@ -11,7 +11,7 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="ASTHA ERP Enterprise Core API",
     description="Unified Enterprise Cloud & Desktop ERP API for Astha Builders & Hardware",
-    version="1.0.0"
+    version="2.0.0"
 )
 
 # Enable CORS for Desktop (Tauri) and Web (Next.js/React)
@@ -23,6 +23,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router, prefix="/api/v1")
 app.include_router(parties.router, prefix="/api/v1")
 app.include_router(sales.router, prefix="/api/v1")
 app.include_router(purchases.router, prefix="/api/v1")
@@ -38,4 +39,4 @@ def root_web_ui():
 
 @app.get("/health")
 def health_check():
-    return {"status": "healthy", "system": "ASTHA ERP Unified Platform"}
+    return {"status": "healthy", "system": "ASTHA ERP Enterprise Platform v2.0"}

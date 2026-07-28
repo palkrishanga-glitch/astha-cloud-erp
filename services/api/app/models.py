@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from sqlalchemy import (
-    Column, String, Integer, Numeric, Boolean, DateTime, Date, Text, ForeignKey, Enum as SQLEnum
+    Column, String, Integer, Numeric, Boolean, DateTime, Date, Text, ForeignKey
 )
 from sqlalchemy.orm import relationship
 from .database import Base
@@ -13,14 +13,14 @@ class Role(Base):
     __tablename__ = "roles"
     
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(50), unique=True, nullable=False)
+    name = Column(String(50), unique=True, nullable=False) # Owner, Administrator, Manager, Accountant, Sales Executive, Cashier, etc.
     description = Column(Text, nullable=True)
 
 class Permission(Base):
     __tablename__ = "permissions"
     
     id = Column(Integer, primary_key=True, index=True)
-    code = Column(String(100), unique=True, nullable=False) # e.g. 'party:create', 'accounting:post_jv'
+    code = Column(String(100), unique=True, nullable=False) # e.g. 'products:can_change_price', 'invoices:delete'
     module = Column(String(50), nullable=False)
     description = Column(Text, nullable=True)
 
@@ -28,14 +28,52 @@ class User(Base):
     __tablename__ = "users"
     
     id = Column(String(36), primary_key=True, default=generate_uuid)
+    employee_id = Column(String(30), unique=True, nullable=True, index=True)
     username = Column(String(50), unique=True, nullable=False, index=True)
-    email = Column(String(100), nullable=True)
+    full_name = Column(String(100), nullable=False)
+    email = Column(String(100), unique=True, nullable=True, index=True)
+    mobile = Column(String(15), unique=True, nullable=True, index=True)
     password_hash = Column(String(255), nullable=False)
+    owner_pin_hash = Column(String(255), nullable=True) # Sensitive action verification
     role_id = Column(Integer, ForeignKey("roles.id"), nullable=False)
-    is_active = Column(Boolean, default=True)
+    department = Column(String(50), nullable=True)
+    designation = Column(String(50), nullable=True)
+    status = Column(String(20), default='ACTIVE') # ACTIVE, INACTIVE, BLOCKED, SUSPENDED, DELETED
+    profile_photo = Column(Text, nullable=True)
+    last_login = Column(DateTime, nullable=True)
+    failed_login_attempts = Column(Integer, default=0)
+    locked_until = Column(DateTime, nullable=True)
+    theme_preference = Column(String(20), default='dark') # dark, light, system
     created_at = Column(DateTime, default=datetime.utcnow)
-    
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
     role = relationship("Role")
+
+class UserSession(Base):
+    __tablename__ = "user_sessions"
+    
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    session_token = Column(String(255), unique=True, nullable=False, index=True)
+    ip_address = Column(String(45), nullable=True)
+    machine_name = Column(String(100), nullable=True)
+    user_agent = Column(Text, nullable=True)
+    login_time = Column(DateTime, default=datetime.utcnow)
+    last_activity = Column(DateTime, default=datetime.utcnow)
+    is_active = Column(Boolean, default=True)
+
+class LoginHistory(Base):
+    __tablename__ = "login_history"
+    
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    user_id = Column(String(36), nullable=True, index=True)
+    username = Column(String(50), nullable=False)
+    login_time = Column(DateTime, default=datetime.utcnow)
+    logout_time = Column(DateTime, nullable=True)
+    ip_address = Column(String(45), nullable=True)
+    device_info = Column(String(150), nullable=True)
+    status = Column(String(20), nullable=False) # SUCCESS, FAILED, LOCKED
+    failure_reason = Column(String(200), nullable=True)
 
 class Party(Base):
     __tablename__ = "parties"
@@ -72,7 +110,7 @@ class PartyLedger(Base):
     party_id = Column(String(36), ForeignKey("parties.id"), nullable=False, index=True)
     date = Column(Date, nullable=False, index=True)
     voucher_number = Column(String(50), nullable=False)
-    voucher_type = Column(String(30), nullable=False) # 'OPENING_BALANCE', 'SALES_INVOICE', 'RECEIPT', etc.
+    voucher_type = Column(String(30), nullable=False)
     description = Column(Text, nullable=True)
     debit = Column(Numeric(12, 2), default=0.00)
     credit = Column(Numeric(12, 2), default=0.00)
@@ -153,7 +191,7 @@ class Account(Base):
     code = Column(String(20), unique=True, nullable=False, index=True)
     name = Column(String(100), nullable=False)
     parent_id = Column(Integer, ForeignKey("accounts.id"), nullable=True)
-    account_type = Column(String(20), nullable=False) # Asset, Liability, Equity, Revenue, Expense
+    account_type = Column(String(20), nullable=False)
     opening_balance = Column(Numeric(12, 2), default=0.00)
     opening_type = Column(String(10), default='DEBIT')
 
@@ -163,7 +201,7 @@ class Voucher(Base):
     id = Column(String(36), primary_key=True, default=generate_uuid)
     voucher_no = Column(String(50), unique=True, nullable=False, index=True)
     voucher_date = Column(Date, nullable=False)
-    voucher_type = Column(String(20), nullable=False) # JOURNAL, RECEIPT, PAYMENT, CONTRA, DEBIT_NOTE, CREDIT_NOTE
+    voucher_type = Column(String(20), nullable=False)
     narration = Column(Text, nullable=True)
     total_amount = Column(Numeric(12, 2), nullable=False)
     created_by = Column(String(36), nullable=False)
@@ -188,10 +226,14 @@ class AuditLog(Base):
     
     id = Column(String(36), primary_key=True, default=generate_uuid)
     user_id = Column(String(36), nullable=False)
-    action = Column(String(50), nullable=False)
-    table_name = Column(String(50), nullable=False)
-    record_id = Column(String(36), nullable=False)
+    role_name = Column(String(50), nullable=True)
+    module = Column(String(50), nullable=False)
+    action = Column(String(50), nullable=False) # LOGIN, LOGOUT, DELETE_INVOICE, RESTORE_DB, etc.
+    table_name = Column(String(50), nullable=True)
+    record_id = Column(String(36), nullable=True)
     old_value = Column(Text, nullable=True)
     new_value = Column(Text, nullable=True)
     ip_address = Column(String(45), nullable=True)
+    machine_name = Column(String(100), nullable=True)
+    status = Column(String(20), default='SUCCESS')
     timestamp = Column(DateTime, default=datetime.utcnow)
