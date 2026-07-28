@@ -1,0 +1,30 @@
+{
+  "name": "astha-erp-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Enterprise-Grade Cloud-Enabled ERP for Astha Builders & Hardware (Desktop + Web)",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev --workspace=apps/web",
+    "dev:desktop": "npm run dev --workspace=apps/desktop",
+    "dev:api": "python -m uvicorn services.api.main:app --reload --port 8000",
+    "build:web": "npm run build --workspace=apps/web",
+    "build:desktop": "npm run tauri build --workspace=apps/desktop",
+    "test": "python -m pytest services/api/tests"
+  },
+  "keywords": [
+    "erp",
+    "inventory",
+    "accounting",
+    "gst",
+    "hardware",
+    "tauri",
+    "fastapi",
+    "react"
+  ],
+  "author": "Astha ERP Core Engineering Team",
+  "license": "UNLICENSED"
+}

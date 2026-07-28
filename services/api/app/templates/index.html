@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ASTHA ERP — Astha Builders & Hardware</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #070a11; }
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+  </style>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col antialiased selection:bg-teal-500 selection:text-white">
+
+  <!-- Top Bar -->
+  <header className="h-16 bg-slate-900/80 border-b border-slate-800 px-6 flex items-center justify-between sticky top-0 z-20 backdrop-blur-md">
+    <div class="flex items-center gap-4">
+      <div class="h-10 w-10 rounded-xl bg-gradient-to-tr from-teal-500 to-blue-600 flex items-center justify-center font-black text-xl shadow-lg shadow-teal-500/20 text-white">
+        A
+      </div>
+      <div>
+        <h1 class="font-extrabold text-lg tracking-wider text-white leading-tight">ASTHA ERP</h1>
+        <p class="text-[10px] text-teal-400 font-mono tracking-widest uppercase">Astha Builders & Hardware</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-6">
+      <div class="flex items-center gap-2 text-xs font-mono bg-slate-800/80 px-3 py-1.5 rounded-full border border-slate-700/60 text-slate-300">
+        <span class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>Local Backend: Active (8000)</span>
+      </div>
+      <a href="/docs" target="_blank" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-teal-300 rounded-lg text-xs font-semibold border border-teal-500/30 transition-all">
+        Swagger API Docs ↗
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <div class="flex flex-1 overflow-hidden">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-slate-900/60 border-r border-slate-800 p-4 flex flex-col justify-between">
+      <nav class="space-y-1">
+        <button onclick="switchTab('dashboard')" id="tab-dashboard" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all bg-teal-500/10 text-teal-300 border border-teal-500/30">
+          <span>📊</span> Dashboard
+        </button>
+        <button onclick="switchTab('parties')" id="tab-parties" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
+          <span>👥</span> Parties & Ledgers
+        </button>
+        <button onclick="switchTab('pos')" id="tab-pos" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
+          <span>🛒</span> POS Billing (Counter)
+        </button>
+      </nav>
+
+      <div class="p-3 rounded-lg bg-slate-950/60 border border-slate-800 text-xs text-slate-400 space-y-1">
+        <p class="font-semibold text-slate-200">System Mode</p>
+        <p class="text-[11px] text-teal-400 font-mono">Windows Desktop + Web</p>
+        <p class="text-[10px] text-slate-500">Database: SQLite (Local)</p>
+      </div>
+    </aside>
+
+    <!-- Content Panel -->
+    <main class="flex-1 p-8 overflow-y-auto space-y-6">
+      
+      <!-- DASHBOARD TAB -->
+      <div id="view-dashboard" class="space-y-6">
+        <!-- Stat Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
+          <div class="glass-panel p-5 rounded-xl border border-slate-800">
+            <p class="text-xs font-semibold uppercase text-slate-400">Today's Sales</p>
+            <h3 class="text-2xl font-extrabold text-white mt-2">₹ 1,48,500.00</h3>
+            <span class="text-[11px] text-emerald-400 font-medium">+12.4% vs yesterday</span>
+          </div>
+          <div class="glass-panel p-5 rounded-xl border border-slate-800">
+            <p class="text-xs font-semibold uppercase text-slate-400">Collections</p>
+            <h3 class="text-2xl font-extrabold text-white mt-2">₹ 92,000.00</h3>
+            <span class="text-[11px] text-emerald-400 font-medium">Cash/UPI Verified</span>
+          </div>
+          <div class="glass-panel p-5 rounded-xl border border-slate-800">
+            <p class="text-xs font-semibold uppercase text-slate-400">Receivables</p>
+            <h3 class="text-2xl font-extrabold text-teal-300 mt-2" id="dash-receivables">Loading...</h3>
+            <span class="text-[11px] text-slate-400 font-medium">Across active parties</span>
+          </div>
+          <div class="glass-panel p-5 rounded-xl border border-slate-800">
+            <p class="text-xs font-semibold uppercase text-slate-400">Low Stock Alerts</p>
+            <h3 class="text-2xl font-extrabold text-amber-400 mt-2">3 Products</h3>
+            <span class="text-[11px] text-amber-400/80 font-medium">Reorder required</span>
+          </div>
+        </div>
+
+        <!-- Quick Action Panel -->
+        <div class="glass-panel p-6 rounded-xl border border-slate-800 space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-base font-bold text-white">Parties Overview</h3>
+            <button onclick="switchTab('parties')" class="px-3.5 py-1.5 bg-teal-600 hover:bg-teal-500 text-white rounded-lg text-xs font-semibold transition-all">
+              Manage Parties →
+            </button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="bg-slate-900 text-slate-400 font-semibold uppercase tracking-wider text-[10px] border-b border-slate-800">
+                <tr>
+                  <th class="py-3 px-4">Code</th>
+                  <th class="py-3 px-4">Business Name</th>
+                  <th class="py-3 px-4">Type</th>
+                  <th class="py-3 px-4">Mobile</th>
+                  <th class="py-3 px-4">City</th>
+                  <th class="py-3 px-4">Credit Limit</th>
+                  <th class="py-3 px-4">Current Outstanding</th>
+                </tr>
+              </thead>
+              <tbody id="dash-parties-table" class="divide-y divide-slate-800/60">
+                <tr><td colspan="7" class="py-4 text-center text-slate-500">Loading parties data...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- PARTIES TAB -->
+      <div id="view-parties" class="hidden space-y-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-xl font-bold text-white">Party Directory & Outstanding Ledger</h2>
+            <p class="text-xs text-slate-400">Create customers, suppliers, and view dynamic ledger balances.</p>
+          </div>
+          <button onclick="toggleModal(true)" class="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-lg text-xs font-semibold shadow-lg shadow-teal-600/20">
+            + Add New Party
+          </button>
+        </div>
+
+        <!-- Party List Table -->
+        <div class="glass-panel rounded-xl p-6 border border-slate-800">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="bg-slate-900 text-slate-400 font-semibold uppercase tracking-wider text-[10px] border-b border-slate-800">
+                <tr>
+                  <th class="py-3 px-4">Party Code</th>
+                  <th class="py-3 px-4">Business Name</th>
+                  <th class="py-3 px-4">Type</th>
+                  <th class="py-3 px-4">GSTIN</th>
+                  <th class="py-3 px-4">Opening Balance</th>
+                  <th class="py-3 px-4">Credit Limit</th>
+                  <th class="py-3 px-4">Current Outstanding</th>
+                  <th class="py-3 px-4">Action</th>
+                </tr>
+              </thead>
+              <tbody id="parties-full-table" class="divide-y divide-slate-800/60">
+                <tr><td colspan="8" class="py-4 text-center text-slate-500">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- POS BILLING TAB -->
+      <div id="view-pos" class="hidden space-y-6">
+        <div class="glass-panel p-6 rounded-xl border border-slate-800 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+            <div>
+              <h2 class="text-lg font-bold text-white">Counter POS Sales Billing</h2>
+              <p class="text-xs text-slate-400">Fast keyboard-driven checkout for retail & wholesale items.</p>
+            </div>
+            <div class="flex items-center gap-2 text-xs font-mono bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800">
+              <span class="text-teal-400 font-bold">[F1]</span> Search Item | 
+              <span class="text-teal-400 font-bold">[F5]</span> Print Invoice
+            </div>
+          </div>
+
+          <!-- POS Form simulator -->
+          <div class="grid grid-cols-3 gap-4">
+            <div class="col-span-2 space-y-3">
+              <label class="text-xs font-semibold text-slate-400">Scan Barcode / Select Product</label>
+              <input type="text" placeholder="Scan barcode or type item (e.g. Ultratech Cement)..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-xs text-white focus:outline-none focus:border-teal-500 font-mono" />
+              
+              <div class="bg-slate-950 p-4 rounded-lg border border-slate-800 min-h-[160px] text-xs text-slate-400">
+                <table class="w-full text-left">
+                  <thead class="text-slate-500 border-b border-slate-800 pb-2">
+                    <tr><th>Item Name</th><th>Qty</th><th>Rate</th><th>GST</th><th>Total</th></tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-800/40">
+                    <tr><td class="py-2 font-medium text-slate-200">Ultratech Cement OPC 53</td><td>50 Bags</td><td>₹ 380.00</td><td>28%</td><td class="font-bold text-white">₹ 24,320.00</td></tr>
+                    <tr><td class="py-2 font-medium text-slate-200">TMT Steel Rods 12mm</td><td>2 Bundles</td><td>₹ 3,800.00</td><td>18%</td><td class="font-bold text-white">₹ 8,968.00</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800 space-y-4">
+              <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">Invoice Summary</h4>
+              <div class="space-y-2 text-xs">
+                <div class="flex justify-between text-slate-400"><span>Subtotal:</span><span>₹ 26,600.00</span></div>
+                <div class="flex justify-between text-slate-400"><span>CGST (14%/9%):</span><span>₹ 3,344.00</span></div>
+                <div class="flex justify-between text-slate-400"><span>SGST (14%/9%):</span><span>₹ 3,344.00</span></div>
+                <div class="flex justify-between text-white text-base font-extrabold border-t border-slate-800 pt-2">
+                  <span>Grand Total:</span><span class="text-teal-400">₹ 33,288.00</span>
+                </div>
+              </div>
+              <button onclick="alert('Invoice Printed & Saved to SQLite Offline Queue successfully!')" class="w-full py-3 bg-teal-600 hover:bg-teal-500 text-white font-bold rounded-lg text-xs tracking-wider uppercase transition-all shadow-lg shadow-teal-600/30">
+                [F5] Save & Print Invoice
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Create Party Modal -->
+  <div id="party-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white">Create New Party Account</h3>
+        <button onclick="toggleModal(false)" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+
+      <form id="create-party-form" class="space-y-3 text-xs">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-slate-400 mb-1">Party Code *</label>
+            <input type="text" id="inp-code" required placeholder="CUST-102" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-teal-500 font-mono" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">Party Type *</label>
+            <select id="inp-type" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-teal-500">
+              <option value="CUSTOMER">CUSTOMER</option>
+              <option value="SUPPLIER">SUPPLIER</option>
+              <option value="BOTH">BOTH</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-slate-400 mb-1">Business Name *</label>
+          <input type="text" id="inp-name" required placeholder="Astha Infrastructure Ltd" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-teal-500" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-slate-400 mb-1">Mobile Number *</label>
+            <input type="text" id="inp-mobile" required placeholder="9876543210" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-teal-500" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">GSTIN</label>
+            <input type="text" id="inp-gstin" placeholder="21AAAAA0000A1Z5" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-teal-500 font-mono" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="block text-slate-400 mb-1">Opening Balance</label>
+            <input type="number" id="inp-opbal" value="0.00" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-teal-500 font-mono" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">Balance Type</label>
+            <select id="inp-optype" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-teal-500">
+              <option value="DEBIT">DEBIT (Dr)</option>
+              <option value="CREDIT">CREDIT (Cr)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">Credit Limit (₹)</label>
+            <input type="number" id="inp-limit" value="100000.00" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-teal-500 font-mono" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="block text-slate-400 mb-1">City *</label>
+            <input type="text" id="inp-city" required value="Bhubaneswar" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-teal-500" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">State *</label>
+            <input type="text" id="inp-state" required value="Odisha" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-teal-500" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">Pincode *</label>
+            <input type="text" id="inp-pincode" required value="751001" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-teal-500" />
+          </div>
+        </div>
+
+        <div class="pt-3 flex justify-end gap-3">
+          <button type="button" onclick="toggleModal(false)" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs">Cancel</button>
+          <button type="submit" class="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white font-bold rounded-lg text-xs shadow-md shadow-teal-600/30">Save Party Account</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function switchTab(tab) {
+      document.getElementById('view-dashboard').classList.add('hidden');
+      document.getElementById('view-parties').classList.add('hidden');
+      document.getElementById('view-pos').classList.add('hidden');
+      
+      document.getElementById('tab-dashboard').className = "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/50";
+      document.getElementById('tab-parties').className = "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/50";
+      document.getElementById('tab-pos').className = "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/50";
+
+      document.getElementById('view-' + tab).classList.remove('hidden');
+      document.getElementById('tab-' + tab).className = "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all bg-teal-500/10 text-teal-300 border border-teal-500/30";
+
+      if (tab === 'parties' || tab === 'dashboard') {
+        loadPartiesData();
+      }
+    }
+
+    function toggleModal(show) {
+      const el = document.getElementById('party-modal');
+      if (show) el.classList.remove('hidden'), el.classList.add('flex');
+      else el.classList.add('hidden'), el.classList.remove('flex');
+    }
+
+    async function loadPartiesData() {
+      try {
+        const res = await fetch('/api/v1/parties/');
+        const parties = await res.json();
+        
+        let dashRows = '';
+        let fullRows = '';
+        let totalReceivables = 0;
+
+        for (const p of parties) {
+          const outRes = await fetch(`/api/v1/parties/${p.id}/outstanding`);
+          const outData = await outRes.json();
+          totalReceivables += outData.current_outstanding;
+
+          const rowHtml = `
+            <tr class="hover:bg-slate-800/30 transition-colors">
+              <td class="py-3 px-4 font-mono text-teal-400 font-semibold">${p.party_code}</td>
+              <td class="py-3 px-4 font-bold text-white">${p.business_name}</td>
+              <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-teal-300 font-mono">${p.party_type}</span></td>
+              <td class="py-3 px-4">${p.mobile}</td>
+              <td class="py-3 px-4">${p.city}</td>
+              <td class="py-3 px-4 font-mono">₹ ${parseFloat(p.credit_limit).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+              <td class="py-3 px-4 font-mono font-bold ${outData.current_outstanding > 0 ? 'text-amber-400' : 'text-emerald-400'}">
+                ₹ ${outData.current_outstanding.toLocaleString('en-IN', {minimumFractionDigits: 2})}
+              </td>
+            </tr>
+          `;
+          dashRows += rowHtml;
+
+          fullRows += `
+            <tr class="hover:bg-slate-800/30 transition-colors">
+              <td class="py-3 px-4 font-mono text-teal-400 font-semibold">${p.party_code}</td>
+              <td class="py-3 px-4 font-bold text-white">${p.business_name}</td>
+              <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-teal-300 font-mono">${p.party_type}</span></td>
+              <td class="py-3 px-4 font-mono text-slate-400">${p.gstin || 'N/A'}</td>
+              <td class="py-3 px-4 font-mono">₹ ${parseFloat(p.opening_balance).toLocaleString('en-IN', {minimumFractionDigits: 2})} (${p.opening_balance_type})</td>
+              <td class="py-3 px-4 font-mono">₹ ${parseFloat(p.credit_limit).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+              <td class="py-3 px-4 font-mono font-bold ${outData.current_outstanding > 0 ? 'text-amber-400' : 'text-emerald-400'}">
+                ₹ ${outData.current_outstanding.toLocaleString('en-IN', {minimumFractionDigits: 2})}
+              </td>
+              <td class="py-3 px-4">
+                <button onclick="alert('Ledger entries view for party: ${p.party_code}')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-teal-300 rounded text-[11px]">View Ledger</button>
+              </td>
+            </tr>
+          `;
+        }
+
+        if (parties.length === 0) {
+          dashRows = '<tr><td colspan="7" class="py-4 text-center text-slate-500">No parties registered yet. Click "Add New Party" to create one.</td></tr>';
+          fullRows = '<tr><td colspan="8" class="py-4 text-center text-slate-500">No parties registered yet. Click "Add New Party" to create one.</td></tr>';
+        }
+
+        document.getElementById('dash-parties-table').innerHTML = dashRows;
+        document.getElementById('parties-full-table').innerHTML = fullRows;
+        document.getElementById('dash-receivables').innerText = '₹ ' + totalReceivables.toLocaleString('en-IN', {minimumFractionDigits: 2});
+
+      } catch (err) {
+        console.error("Failed loading parties:", err);
+      }
+    }
+
+    document.getElementById('create-party-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        party_code: document.getElementById('inp-code').value,
+        party_type: document.getElementById('inp-type').value,
+        business_name: document.getElementById('inp-name').value,
+        mobile: document.getElementById('inp-mobile').value,
+        gstin: document.getElementById('inp-gstin').value || null,
+        opening_balance: parseFloat(document.getElementById('inp-opbal').value || 0),
+        opening_balance_type: document.getElementById('inp-optype').value,
+        credit_limit: parseFloat(document.getElementById('inp-limit').value || 0),
+        opening_balance_date: new Date().toISOString().split('T')[0],
+        address: "Plot 101, Hardware Yard",
+        city: document.getElementById('inp-city').value,
+        state: document.getElementById('inp-state').value,
+        pincode: document.getElementById('inp-pincode').value
+      };
+
+      const res = await fetch('/api/v1/parties/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        toggleModal(false);
+        document.getElementById('create-party-form').reset();
+        loadPartiesData();
+      } else {
+        const err = await res.json();
+        alert("Error creating party: " + (err.detail || "Validation failed"));
+      }
+    });
+
+    // Initial load
+    loadPartiesData();
+  </script>
+</body>
+</html>

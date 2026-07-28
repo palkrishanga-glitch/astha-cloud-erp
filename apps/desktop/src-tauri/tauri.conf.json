@@ -1,0 +1,61 @@
+{
+  "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/dev/tooling/cli/schema.json",
+  "build": {
+    "beforeDevCommand": "npm run dev --workspace=apps/web",
+    "beforeBuildCommand": "npm run build --workspace=apps/web",
+    "devUrl": "http://localhost:5173",
+    "distDir": "../../web/dist"
+  },
+  "package": {
+    "productName": "ASTHA ERP",
+    "version": "1.0.0"
+  },
+  "tauri": {
+    "allowlist": {
+      "all": false,
+      "shell": {
+        "all": false,
+        "execute": true,
+        "open": true
+      }
+    },
+    "bundle": {
+      "active": true,
+      "category": "Business",
+      "copyright": "Astha Builders & Hardware",
+      "deb": {
+        "depends": []
+      },
+      "externalBin": [],
+      "icon": [
+        "icons/32x32.png",
+        "icons/128x128.png",
+        "icons/128x128@2x.png",
+        "icons/icon.icns",
+        "icons/icon.ico"
+      ],
+      "identifier": "com.asthaerp.desktop",
+      "longDescription": "Enterprise-Grade Desktop ERP for Astha Builders & Hardware",
+      "resources": [],
+      "shortDescription": "ASTHA ERP Desktop Client",
+      "targets": "all",
+      "windows": {
+        "certificateThumbprint": null,
+        "digestAlgorithm": "sha256",
+        "timestampUrl": ""
+      }
+    },
+    "security": {
+      "csp": null
+    },
+    "windows": [
+      {
+        "fullscreen": false,
+        "height": 800,
+        "resizable": true,
+        "title": "ASTHA ERP — Astha Builders & Hardware",
+        "width": 1280
+      }
+    ]
+  }
+}

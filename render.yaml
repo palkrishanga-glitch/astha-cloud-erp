@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: astha-cloud-erp
+    env: docker
+    plan: free
+    region: oregon
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: ASTHA_JWT_SECRET
+        generateValue: true
