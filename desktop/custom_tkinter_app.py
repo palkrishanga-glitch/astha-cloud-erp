@@ -27,7 +27,7 @@ class AsthaERPCustomTkinterApp(ctk.CTk):
             text="ASTHA ERP",
             font=ctk.CTkFont(size=20, weight="bold")
         )
-        self.logo_label.grid(row=0, column=0, px=20, py=(20, 10))
+        self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
 
         self.sub_logo = ctk.CTkLabel(
             self.sidebar_frame,
@@ -35,18 +35,18 @@ class AsthaERPCustomTkinterApp(ctk.CTk):
             font=ctk.CTkFont(size=11),
             text_color="#3B82F6"
         )
-        self.sub_logo.grid(row=1, column=0, px=20, py=(0, 20))
+        self.sub_logo.grid(row=1, column=0, padx=20, pady=(0, 20))
 
         # Sidebar Navigation Buttons
         self.btn_dash = ctk.CTkButton(self.sidebar_frame, text="📊 Dashboard", fg_color="#3B82F6", command=self.show_dashboard)
-        self.btn_dash.grid(row=2, column=0, px=20, py=10)
+        self.btn_dash.grid(row=2, column=0, padx=20, pady=10)
 
         self.btn_parties = ctk.CTkButton(self.sidebar_frame, text="👥 Parties & Ledgers", fg_color="#3B82F6", command=self.show_parties)
-        self.btn_parties.grid(row=3, column=0, px=20, py=10)
+        self.btn_parties.grid(row=3, column=0, padx=20, pady=10)
 
         # Main Display Area
         self.main_frame = ctk.CTkFrame(self, corner_radius=10, fg_color="#1E293B")
-        self.main_frame.grid(row=0, column=1, px=20, py=20, sticky="nsew")
+        self.main_frame.grid(row=0, column=1, padx=20, pady=20, sticky="nsew")
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
@@ -55,7 +55,7 @@ class AsthaERPCustomTkinterApp(ctk.CTk):
             text="ASTHA ERP Enterprise Control Panel",
             font=ctk.CTkFont(size=18, weight="bold")
         )
-        self.title_label.pack(pady=20, px=20)
+        self.title_label.pack(pady=20, padx=20)
 
         self.status_label = ctk.CTkLabel(
             self.main_frame,
