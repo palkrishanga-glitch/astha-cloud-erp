@@ -266,7 +266,7 @@ class SalesQuotation(Base):
     quotation_date = Column(Date, nullable=False)
     party_id = Column(String(36), ForeignKey("parties.id"), nullable=False)
     total_amount = Column(Numeric(12, 2), nullable=False)
-    status = Column(String(20), default='PENDING') # PENDING, CONVERTED_TO_ORDER, CONVERTED_TO_INVOICE, EXPIRED
+    status = Column(String(20), default='PENDING')
     created_by = Column(String(36), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -279,22 +279,20 @@ class DeliveryChallan(Base):
     warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False)
     vehicle_number = Column(String(30), nullable=True)
     total_items = Column(Integer, default=0)
-    status = Column(String(20), default='DELIVERED') # DELIVERED, INVOICED
+    status = Column(String(20), default='DELIVERED')
     created_by = Column(String(36), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class SalesInvoiceModel(Base):
     __tablename__ = "sales_invoices"
-    
     id = Column(String(36), primary_key=True, default=generate_uuid)
     invoice_no = Column(String(50), unique=True, nullable=False, index=True)
     invoice_date = Column(Date, nullable=False, index=True)
     financial_year = Column(String(10), nullable=False, default='2026-2027')
-    invoice_type = Column(String(20), default='CREDIT') # CASH, CREDIT
+    invoice_type = Column(String(20), default='CREDIT')
     party_id = Column(String(36), ForeignKey("parties.id"), nullable=False, index=True)
     warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False)
     salesman_name = Column(String(100), nullable=True)
-    
     subtotal = Column(Numeric(12, 2), nullable=False)
     discount_amount = Column(Numeric(12, 2), default=0.00)
     cgst_total = Column(Numeric(12, 2), default=0.00)
@@ -303,14 +301,12 @@ class SalesInvoiceModel(Base):
     cess_total = Column(Numeric(12, 2), default=0.00)
     round_off = Column(Numeric(5, 2), default=0.00)
     grand_total = Column(Numeric(12, 2), nullable=False)
-    
-    payment_mode = Column(String(20), default='CASH') # CASH, UPI, BANK_TRANSFER, CHEQUE, CREDIT_CARD, MIXED
-    payment_status = Column(String(20), default='UNPAID') # UNPAID, PARTIAL, PAID
+    payment_mode = Column(String(20), default='CASH')
+    payment_status = Column(String(20), default='UNPAID')
     amount_paid = Column(Numeric(12, 2), default=0.00)
     balance_due = Column(Numeric(12, 2), default=0.00)
-    
     remarks = Column(Text, nullable=True)
-    status = Column(String(20), default='APPROVED') # DRAFT, APPROVED, CANCELLED, RETURNED
+    status = Column(String(20), default='APPROVED')
     created_by = Column(String(36), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -320,7 +316,6 @@ class SalesInvoiceModel(Base):
 
 class SalesInvoiceItem(Base):
     __tablename__ = "sales_invoice_items"
-    
     id = Column(String(36), primary_key=True, default=generate_uuid)
     invoice_id = Column(String(36), ForeignKey("sales_invoices.id"), nullable=False, index=True)
     product_id = Column(String(36), ForeignKey("products.id"), nullable=False, index=True)
@@ -342,12 +337,101 @@ class SalesInvoiceItem(Base):
 
 class SalesReturnModel(Base):
     __tablename__ = "sales_returns"
-    
     id = Column(String(36), primary_key=True, default=generate_uuid)
     return_no = Column(String(50), unique=True, nullable=False, index=True)
     return_date = Column(Date, nullable=False)
     original_invoice_no = Column(String(50), nullable=False)
     party_id = Column(String(36), ForeignKey("parties.id"), nullable=False)
+    total_refund_amount = Column(Numeric(12, 2), nullable=False)
+    reason = Column(Text, nullable=False)
+    created_by = Column(String(36), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class PurchaseOrder(Base):
+    __tablename__ = "purchase_orders"
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    po_number = Column(String(50), unique=True, nullable=False, index=True)
+    po_date = Column(Date, nullable=False)
+    supplier_id = Column(String(36), ForeignKey("parties.id"), nullable=False)
+    warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False)
+    expected_delivery_date = Column(Date, nullable=True)
+    total_amount = Column(Numeric(12, 2), nullable=False)
+    status = Column(String(20), default='APPROVED') # DRAFT, APPROVED, PARTIALLY_RECEIVED, COMPLETED, CANCELLED
+    created_by = Column(String(36), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class GoodsReceiptNote(Base):
+    __tablename__ = "goods_receipt_notes"
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    grn_number = Column(String(50), unique=True, nullable=False, index=True)
+    po_number = Column(String(50), nullable=True)
+    supplier_id = Column(String(36), ForeignKey("parties.id"), nullable=False)
+    warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False)
+    received_date = Column(Date, nullable=False)
+    received_by = Column(String(100), nullable=False)
+    status = Column(String(20), default='RECEIVED')
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class PurchaseInvoiceModel(Base):
+    __tablename__ = "purchase_invoices"
+    
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    bill_number = Column(String(50), unique=True, nullable=False, index=True)
+    supplier_invoice_no = Column(String(50), nullable=False, index=True)
+    bill_date = Column(Date, nullable=False, index=True)
+    due_date = Column(Date, nullable=True)
+    supplier_id = Column(String(36), ForeignKey("parties.id"), nullable=False, index=True)
+    warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False)
+    
+    subtotal = Column(Numeric(12, 2), nullable=False)
+    discount_amount = Column(Numeric(12, 2), default=0.00)
+    cgst_total = Column(Numeric(12, 2), default=0.00)
+    sgst_total = Column(Numeric(12, 2), default=0.00)
+    igst_total = Column(Numeric(12, 2), default=0.00)
+    grand_total = Column(Numeric(12, 2), nullable=False)
+    
+    payment_mode = Column(String(20), default='BANK_TRANSFER')
+    payment_status = Column(String(20), default='UNPAID') # UNPAID, PARTIAL, PAID
+    amount_paid = Column(Numeric(12, 2), default=0.00)
+    balance_due = Column(Numeric(12, 2), default=0.00)
+    
+    remarks = Column(Text, nullable=True)
+    status = Column(String(20), default='APPROVED')
+    created_by = Column(String(36), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    supplier = relationship("Party")
+    items = relationship("PurchaseInvoiceItem", back_populates="purchase")
+
+class PurchaseInvoiceItem(Base):
+    __tablename__ = "purchase_invoice_items"
+    
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    purchase_id = Column(String(36), ForeignKey("purchase_invoices.id"), nullable=False, index=True)
+    product_id = Column(String(36), ForeignKey("products.id"), nullable=False, index=True)
+    hsn_code = Column(String(10), nullable=False)
+    quantity = Column(Numeric(12, 2), nullable=False)
+    unit_name = Column(String(20), nullable=False)
+    purchase_rate = Column(Numeric(12, 2), nullable=False)
+    discount_percent = Column(Numeric(5, 2), default=0.00)
+    taxable_amount = Column(Numeric(12, 2), nullable=False)
+    gst_rate = Column(Numeric(5, 2), nullable=False)
+    cgst_amount = Column(Numeric(12, 2), default=0.00)
+    sgst_amount = Column(Numeric(12, 2), default=0.00)
+    line_total = Column(Numeric(12, 2), nullable=False)
+
+    purchase = relationship("PurchaseInvoiceModel", back_populates="items")
+    product = relationship("Product")
+
+class PurchaseReturnModel(Base):
+    __tablename__ = "purchase_returns"
+    
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    return_no = Column(String(50), unique=True, nullable=False, index=True)
+    return_date = Column(Date, nullable=False)
+    original_bill_number = Column(String(50), nullable=False)
+    supplier_id = Column(String(36), ForeignKey("parties.id"), nullable=False)
     total_refund_amount = Column(Numeric(12, 2), nullable=False)
     reason = Column(Text, nullable=False)
     created_by = Column(String(36), nullable=False)
