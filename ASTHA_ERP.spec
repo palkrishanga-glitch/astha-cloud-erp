@@ -5,7 +5,7 @@ a = Analysis(
     ['desktop_app.py'],
     pathex=[],
     binaries=[],
-    datas=[('services\\api\\app\\templates', 'services\\api\\app\\templates')],
+    datas=[('services\\api\\app\\templates', 'services\\api\\app\\templates'), ('services\\api\\app\\static', 'services\\api\\app\\static')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

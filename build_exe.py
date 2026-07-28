@@ -5,14 +5,14 @@ import sys
 def build_standalone_exe():
     print("============================================================")
     print("  ASTHA ERP — Building Standalone Windows Executable (.exe)")
+    print("  Including old & new repository templates & static assets")
     print("============================================================")
 
-    # PyInstaller arguments
-    # Bundles templates and API services into a single executable folder
     templates_src = os.path.join("services", "api", "app", "templates")
     templates_target = os.path.join("services", "api", "app", "templates")
     
-    add_data_arg = f"{templates_src};{templates_target}"
+    static_src = os.path.join("services", "api", "app", "static")
+    static_target = os.path.join("services", "api", "app", "static")
 
     cmd = [
         sys.executable,
@@ -22,7 +22,8 @@ def build_standalone_exe():
         "--onedir",
         "--windowed",
         "--name=ASTHA_ERP",
-        f"--add-data={add_data_arg}",
+        f"--add-data={templates_src};{templates_target}",
+        f"--add-data={static_src};{static_target}",
         "desktop_app.py"
     ]
 
@@ -33,7 +34,7 @@ def build_standalone_exe():
         exe_path = os.path.abspath(os.path.join("dist", "ASTHA_ERP", "ASTHA_ERP.exe"))
         print("\n============================================================")
         print("  BUILD SUCCESSFUL!")
-        print(f"  Windows Desktop Executable Created At:")
+        print(f"  Complete Windows Desktop Executable Created At:")
         print(f"  {exe_path}")
         print("============================================================")
     else:
