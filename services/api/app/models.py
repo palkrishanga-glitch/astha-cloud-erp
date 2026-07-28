@@ -169,7 +169,6 @@ class Warehouse(Base):
 
 class Product(Base):
     __tablename__ = "products"
-    
     id = Column(String(36), primary_key=True, default=generate_uuid)
     product_code = Column(String(50), unique=True, nullable=False, index=True)
     barcode = Column(String(50), unique=True, nullable=True, index=True)
@@ -180,17 +179,13 @@ class Product(Base):
     sub_category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
     brand_id = Column(Integer, ForeignKey("brands.id"), nullable=False)
     unit_id = Column(Integer, ForeignKey("units.id"), nullable=False)
-    
-    # GST & Tax Setup
     hsn_code = Column(String(10), nullable=False)
-    gst_rate = Column(Numeric(5, 2), nullable=False) # e.g. 18.00
+    gst_rate = Column(Numeric(5, 2), nullable=False)
     cgst_rate = Column(Numeric(5, 2), default=0.00)
     sgst_rate = Column(Numeric(5, 2), default=0.00)
     igst_rate = Column(Numeric(5, 2), default=0.00)
     cess_rate = Column(Numeric(5, 2), default=0.00)
-    tax_type = Column(String(20), default='TAX_EXCLUSIVE') # TAX_EXCLUSIVE, TAX_INCLUSIVE
-    
-    # Pricing Hierarchy
+    tax_type = Column(String(20), default='TAX_EXCLUSIVE')
     purchase_price = Column(Numeric(12, 2), nullable=False)
     selling_price = Column(Numeric(12, 2), nullable=False)
     wholesale_price = Column(Numeric(12, 2), nullable=True)
@@ -200,21 +195,16 @@ class Product(Base):
     discount_percentage = Column(Numeric(5, 2), default=0.00)
     minimum_selling_price = Column(Numeric(12, 2), nullable=True)
     cost_price = Column(Numeric(12, 2), nullable=False)
-    
-    # Stock Control & Reorder Rules
     minimum_stock = Column(Numeric(10, 2), default=0.00)
     maximum_stock = Column(Numeric(10, 2), default=10000.00)
     reorder_level = Column(Numeric(10, 2), default=10.00)
     reorder_quantity = Column(Numeric(10, 2), default=50.00)
-    
-    # Opening Stock
     opening_stock = Column(Numeric(10, 2), default=0.00)
     opening_stock_value = Column(Numeric(12, 2), default=0.00)
     opening_stock_date = Column(Date, nullable=True)
     warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False)
-    
     description = Column(Text, nullable=True)
-    status = Column(String(20), default='ACTIVE') # ACTIVE, INACTIVE, DISCONTINUED
+    status = Column(String(20), default='ACTIVE')
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -222,17 +212,13 @@ class Product(Base):
     stock_batches = relationship("StockBatch", back_populates="product")
 
 class StockLedger(Base):
-    """
-    Part 5 Stock Ledger — The Single Source of Truth for all physical stock movements.
-    """
     __tablename__ = "stock_ledgers"
-    
     id = Column(String(36), primary_key=True, default=generate_uuid)
     date = Column(Date, nullable=False, index=True)
     product_id = Column(String(36), ForeignKey("products.id"), nullable=False, index=True)
     warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False, index=True)
     voucher_number = Column(String(50), nullable=False)
-    voucher_type = Column(String(30), nullable=False) # OPENING_STOCK, PURCHASE, PURCHASE_RETURN, SALE, SALES_RETURN, STOCK_TRANSFER, STOCK_ADJUSTMENT, DAMAGE, LOSS
+    voucher_type = Column(String(30), nullable=False)
     qty_in = Column(Numeric(12, 2), default=0.00)
     qty_out = Column(Numeric(12, 2), default=0.00)
     balance_qty = Column(Numeric(12, 2), nullable=False)
@@ -246,7 +232,6 @@ class StockLedger(Base):
 
 class StockBatch(Base):
     __tablename__ = "stock_batches"
-    
     id = Column(String(36), primary_key=True, default=generate_uuid)
     product_id = Column(String(36), ForeignKey("products.id"), nullable=False, index=True)
     warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False)
@@ -263,7 +248,6 @@ class StockBatch(Base):
 
 class StockTransfer(Base):
     __tablename__ = "stock_transfers"
-    
     id = Column(String(36), primary_key=True, default=generate_uuid)
     transfer_no = Column(String(50), unique=True, nullable=False, index=True)
     transfer_date = Column(Date, nullable=False)
@@ -272,6 +256,100 @@ class StockTransfer(Base):
     product_id = Column(String(36), ForeignKey("products.id"), nullable=False)
     quantity = Column(Numeric(12, 2), nullable=False)
     remarks = Column(Text, nullable=True)
+    created_by = Column(String(36), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class SalesQuotation(Base):
+    __tablename__ = "sales_quotations"
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    quotation_no = Column(String(50), unique=True, nullable=False, index=True)
+    quotation_date = Column(Date, nullable=False)
+    party_id = Column(String(36), ForeignKey("parties.id"), nullable=False)
+    total_amount = Column(Numeric(12, 2), nullable=False)
+    status = Column(String(20), default='PENDING') # PENDING, CONVERTED_TO_ORDER, CONVERTED_TO_INVOICE, EXPIRED
+    created_by = Column(String(36), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class DeliveryChallan(Base):
+    __tablename__ = "delivery_challans"
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    challan_no = Column(String(50), unique=True, nullable=False, index=True)
+    challan_date = Column(Date, nullable=False)
+    party_id = Column(String(36), ForeignKey("parties.id"), nullable=False)
+    warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False)
+    vehicle_number = Column(String(30), nullable=True)
+    total_items = Column(Integer, default=0)
+    status = Column(String(20), default='DELIVERED') # DELIVERED, INVOICED
+    created_by = Column(String(36), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class SalesInvoiceModel(Base):
+    __tablename__ = "sales_invoices"
+    
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    invoice_no = Column(String(50), unique=True, nullable=False, index=True)
+    invoice_date = Column(Date, nullable=False, index=True)
+    financial_year = Column(String(10), nullable=False, default='2026-2027')
+    invoice_type = Column(String(20), default='CREDIT') # CASH, CREDIT
+    party_id = Column(String(36), ForeignKey("parties.id"), nullable=False, index=True)
+    warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False)
+    salesman_name = Column(String(100), nullable=True)
+    
+    subtotal = Column(Numeric(12, 2), nullable=False)
+    discount_amount = Column(Numeric(12, 2), default=0.00)
+    cgst_total = Column(Numeric(12, 2), default=0.00)
+    sgst_total = Column(Numeric(12, 2), default=0.00)
+    igst_total = Column(Numeric(12, 2), default=0.00)
+    cess_total = Column(Numeric(12, 2), default=0.00)
+    round_off = Column(Numeric(5, 2), default=0.00)
+    grand_total = Column(Numeric(12, 2), nullable=False)
+    
+    payment_mode = Column(String(20), default='CASH') # CASH, UPI, BANK_TRANSFER, CHEQUE, CREDIT_CARD, MIXED
+    payment_status = Column(String(20), default='UNPAID') # UNPAID, PARTIAL, PAID
+    amount_paid = Column(Numeric(12, 2), default=0.00)
+    balance_due = Column(Numeric(12, 2), default=0.00)
+    
+    remarks = Column(Text, nullable=True)
+    status = Column(String(20), default='APPROVED') # DRAFT, APPROVED, CANCELLED, RETURNED
+    created_by = Column(String(36), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    party = relationship("Party")
+    items = relationship("SalesInvoiceItem", back_populates="invoice")
+
+class SalesInvoiceItem(Base):
+    __tablename__ = "sales_invoice_items"
+    
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    invoice_id = Column(String(36), ForeignKey("sales_invoices.id"), nullable=False, index=True)
+    product_id = Column(String(36), ForeignKey("products.id"), nullable=False, index=True)
+    hsn_code = Column(String(10), nullable=False)
+    quantity = Column(Numeric(12, 2), nullable=False)
+    unit_name = Column(String(20), nullable=False)
+    unit_price = Column(Numeric(12, 2), nullable=False)
+    discount_percent = Column(Numeric(5, 2), default=0.00)
+    discount_amount = Column(Numeric(12, 2), default=0.00)
+    taxable_amount = Column(Numeric(12, 2), nullable=False)
+    gst_rate = Column(Numeric(5, 2), nullable=False)
+    cgst_amount = Column(Numeric(12, 2), default=0.00)
+    sgst_amount = Column(Numeric(12, 2), default=0.00)
+    igst_amount = Column(Numeric(12, 2), default=0.00)
+    line_total = Column(Numeric(12, 2), nullable=False)
+
+    invoice = relationship("SalesInvoiceModel", back_populates="items")
+    product = relationship("Product")
+
+class SalesReturnModel(Base):
+    __tablename__ = "sales_returns"
+    
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    return_no = Column(String(50), unique=True, nullable=False, index=True)
+    return_date = Column(Date, nullable=False)
+    original_invoice_no = Column(String(50), nullable=False)
+    party_id = Column(String(36), ForeignKey("parties.id"), nullable=False)
+    total_refund_amount = Column(Numeric(12, 2), nullable=False)
+    reason = Column(Text, nullable=False)
     created_by = Column(String(36), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 

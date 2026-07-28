@@ -31,7 +31,7 @@ def create_invoice_pdf(invoice_data, business_info, items_data):
         leading=24,
         textColor=colors.HexColor('#1E3A8A')
     )
-    
+
     sub_style = ParagraphStyle(
         'InvSub',
         parent=styles['Normal'],
@@ -48,7 +48,7 @@ def create_invoice_pdf(invoice_data, business_info, items_data):
         fontSize=14,
         leading=16,
         textColor=colors.HexColor('#0D9488'),
-        alignment=2 # Right
+        alignment=2
     )
 
     cell_style = ParagraphStyle(
@@ -113,7 +113,7 @@ def create_invoice_pdf(invoice_data, business_info, items_data):
     cust_name = invoice_data.get("customer", "Cash Customer")
     cust_mobile = invoice_data.get("mobile", "N/A")
     bill_to_text = f"<b>Billed To:</b><br/><b>{cust_name}</b><br/>Mobile: {cust_mobile}<br/>Payment Mode: {invoice_data.get('payment_mode', 'CASH')}"
-    
+
     pay_status = invoice_data.get("payment_status", "Paid").upper()
     status_color = "#10B981" if pay_status == "PAID" else "#F59E0B"
     status_text = f"<br/><br/>Status: <font color='{status_color}'><b>{pay_status}</b></font>"
@@ -169,7 +169,7 @@ def create_invoice_pdf(invoice_data, business_info, items_data):
     bal_val = float(invoice_data.get("balance", 0))
 
     summary_text = f"Grand Total: <b>₹ {total_val:,.2f}</b><br/>Amount Paid: ₹ {paid_val:,.2f}<br/>Balance Due: <b>₹ {bal_val:,.2f}</b>"
-    
+
     sum_table = Table(
         [["", Paragraph(summary_text, ParagraphStyle('SumR', parent=sub_style, alignment=2))]],
         colWidths=[320, 202]
@@ -184,3 +184,38 @@ def create_invoice_pdf(invoice_data, business_info, items_data):
     doc.build(story)
     buffer.seek(0)
     return buffer.getvalue()
+
+def generate_invoice_pdf(invoice_obj, party_obj, items_list):
+    """Wrapper mapping SalesInvoiceModel objects into ReportLab generator."""
+    inv_dict = {
+        "invoice_no": getattr(invoice_obj, "invoice_no", "INV-001"),
+        "date": str(getattr(invoice_obj, "invoice_date", datetime.now().date())),
+        "customer": getattr(party_obj, "business_name", "Cash Customer"),
+        "mobile": getattr(party_obj, "mobile", "N/A"),
+        "payment_mode": getattr(invoice_obj, "payment_mode", "CASH"),
+        "payment_status": getattr(invoice_obj, "payment_status", "PAID"),
+        "total": float(getattr(invoice_obj, "grand_total", 0.0)),
+        "amount_paid": float(getattr(invoice_obj, "amount_paid", 0.0)),
+        "balance": float(getattr(invoice_obj, "balance_due", 0.0))
+    }
+
+    biz_dict = {
+        "business_name": "ASTHA BUILDERS & HARDWARE",
+        "gst": "21AAAAA0000A1Z5",
+        "phone": "+91 98765 43210",
+        "address": "Hardware Yard, Bhubaneswar, Odisha"
+    }
+
+    items_dicts = []
+    for it in items_list:
+        p_name = it.product.product_name if hasattr(it, "product") and it.product else "Item"
+        items_dicts.append({
+            "product": p_name,
+            "quantity": float(it.quantity),
+            "unit": getattr(it, "unit_name", "Pcs"),
+            "price": float(it.unit_price),
+            "gst": float(it.gst_rate),
+            "total": float(it.line_total)
+        })
+
+    return create_invoice_pdf(inv_dict, biz_dict, items_dicts)
