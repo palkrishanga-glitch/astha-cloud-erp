@@ -33,19 +33,19 @@ class AsthaERPCustomTkinterApp(ctk.CTk):
             self.sidebar_frame,
             text="Builders & Hardware",
             font=ctk.CTkFont(size=11),
-            text_color="teal"
+            text_color="#3B82F6"
         )
         self.sub_logo.grid(row=1, column=0, px=20, py=(0, 20))
 
         # Sidebar Navigation Buttons
-        self.btn_dash = ctk.CTkButton(self.sidebar_frame, text="📊 Dashboard", command=self.show_dashboard)
+        self.btn_dash = ctk.CTkButton(self.sidebar_frame, text="📊 Dashboard", fg_color="#3B82F6", command=self.show_dashboard)
         self.btn_dash.grid(row=2, column=0, px=20, py=10)
 
-        self.btn_parties = ctk.CTkButton(self.sidebar_frame, text="👥 Parties & Ledgers", command=self.show_parties)
+        self.btn_parties = ctk.CTkButton(self.sidebar_frame, text="👥 Parties & Ledgers", fg_color="#3B82F6", command=self.show_parties)
         self.btn_parties.grid(row=3, column=0, px=20, py=10)
 
         # Main Display Area
-        self.main_frame = ctk.CTkFrame(self, corner_radius=10)
+        self.main_frame = ctk.CTkFrame(self, corner_radius=10, fg_color="#1E293B")
         self.main_frame.grid(row=0, column=1, px=20, py=20, sticky="nsew")
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
@@ -60,7 +60,7 @@ class AsthaERPCustomTkinterApp(ctk.CTk):
         self.status_label = ctk.CTkLabel(
             self.main_frame,
             text="Status: Connected to Local Server (8000)",
-            text_color="emerald"
+            text_color="#22C55E"
         )
         self.status_label.pack(pady=10)
 

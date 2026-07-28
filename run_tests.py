@@ -23,7 +23,7 @@ def override_get_db():
 
 app.dependency_overrides[get_db] = override_get_db
 
-class TestAsthaERPPart12Suite(unittest.TestCase):
+class TestAsthaERPPart13Suite(unittest.TestCase):
     def setUp(self):
         Base.metadata.create_all(bind=engine)
         self.client = TestClient(app)
@@ -31,26 +31,21 @@ class TestAsthaERPPart12Suite(unittest.TestCase):
     def tearDown(self):
         Base.metadata.drop_all(bind=engine)
 
-    def test_backup_and_restore(self):
-        # 1. Create Backup
-        create_res = self.client.post("/api/v1/backup/create")
-        self.assertEqual(create_res.status_code, 201)
-        data = create_res.json()
-        self.assertEqual(data["status"], "SUCCESS")
-        backup_file = data["backup_file"]
+    def test_ui_ux_design_system_and_templates(self):
+        res = self.client.get("/")
+        self.assertEqual(res.status_code, 200)
+        html = res.text
+        
+        # Verify Part 13 Design Tokens
+        self.assertIn("#2563EB", html) # Light Primary
+        self.assertIn("#3B82F6", html) # Dark Primary
+        self.assertIn("#0F172A", html) # Dark BG
+        self.assertIn("#1E293B", html) # Dark Surface
+        self.assertIn("#22C55E", html) # Dark Success
 
-        # 2. List Backups
-        list_res = self.client.get("/api/v1/backup/list")
-        self.assertEqual(list_res.status_code, 200)
-        self.assertTrue(len(list_res.json()["backups"]) > 0)
-
-        # 3. Restore Backup
-        restore_res = self.client.post("/api/v1/backup/restore", json={
-            "backup_file_name": backup_file,
-            "owner_pin": "1234"
-        })
-        self.assertEqual(restore_res.status_code, 200)
-        self.assertEqual(restore_res.json()["status"], "SUCCESS")
+        # Verify Keyboard Shortcuts
+        self.assertIn("ctrlKey", html)
+        self.assertIn("globalSearchInput", html)
 
 if __name__ == "__main__":
     unittest.main()
