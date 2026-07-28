@@ -13,14 +13,14 @@ class Role(Base):
     __tablename__ = "roles"
     
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(50), unique=True, nullable=False) # Owner, Administrator, Manager, Accountant, Sales Executive, Cashier, etc.
+    name = Column(String(50), unique=True, nullable=False)
     description = Column(Text, nullable=True)
 
 class Permission(Base):
     __tablename__ = "permissions"
     
     id = Column(Integer, primary_key=True, index=True)
-    code = Column(String(100), unique=True, nullable=False) # e.g. 'products:can_change_price', 'invoices:delete'
+    code = Column(String(100), unique=True, nullable=False)
     module = Column(String(50), nullable=False)
     description = Column(Text, nullable=True)
 
@@ -34,16 +34,16 @@ class User(Base):
     email = Column(String(100), unique=True, nullable=True, index=True)
     mobile = Column(String(15), unique=True, nullable=True, index=True)
     password_hash = Column(String(255), nullable=False)
-    owner_pin_hash = Column(String(255), nullable=True) # Sensitive action verification
+    owner_pin_hash = Column(String(255), nullable=True)
     role_id = Column(Integer, ForeignKey("roles.id"), nullable=False)
     department = Column(String(50), nullable=True)
     designation = Column(String(50), nullable=True)
-    status = Column(String(20), default='ACTIVE') # ACTIVE, INACTIVE, BLOCKED, SUSPENDED, DELETED
+    status = Column(String(20), default='ACTIVE')
     profile_photo = Column(Text, nullable=True)
     last_login = Column(DateTime, nullable=True)
     failed_login_attempts = Column(Integer, default=0)
     locked_until = Column(DateTime, nullable=True)
-    theme_preference = Column(String(20), default='dark') # dark, light, system
+    theme_preference = Column(String(20), default='dark')
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -72,7 +72,7 @@ class LoginHistory(Base):
     logout_time = Column(DateTime, nullable=True)
     ip_address = Column(String(45), nullable=True)
     device_info = Column(String(150), nullable=True)
-    status = Column(String(20), nullable=False) # SUCCESS, FAILED, LOCKED
+    status = Column(String(20), nullable=False)
     failure_reason = Column(String(200), nullable=True)
 
 class Party(Base):
@@ -86,22 +86,56 @@ class Party(Base):
     gstin = Column(String(15), nullable=True, index=True)
     pan = Column(String(10), nullable=True)
     mobile = Column(String(15), nullable=False, index=True)
+    alt_mobile = Column(String(15), nullable=True)
     email = Column(String(100), nullable=True)
+    website = Column(String(100), nullable=True)
     address = Column(Text, nullable=False)
-    state = Column(String(50), nullable=False)
-    district = Column(String(50), nullable=True)
+    address_line2 = Column(Text, nullable=True)
     city = Column(String(50), nullable=False)
+    district = Column(String(50), nullable=True)
+    state = Column(String(50), nullable=False)
+    country = Column(String(50), default='India')
     pincode = Column(String(10), nullable=False)
+    
+    # Business Profile
+    gst_registration_type = Column(String(30), default='REGISTERED') # REGISTERED, UNREGISTERED, COMPOSITION, SEZ, EXPORT
+    msme_number = Column(String(50), nullable=True)
+    business_type = Column(String(30), default='RETAIL') # RETAIL, WHOLESALE, DISTRIBUTOR, MANUFACTURER, CONTRACTOR, GOVERNMENT
+    
+    # Financial Terms
     credit_limit = Column(Numeric(12, 2), default=0.00)
     credit_days = Column(Integer, default=0)
     opening_balance = Column(Numeric(12, 2), default=0.00)
     opening_balance_type = Column(String(10), default='DEBIT') # 'DEBIT' or 'CREDIT'
     opening_balance_date = Column(Date, nullable=False)
-    status = Column(String(20), default='ACTIVE')
+    currency = Column(String(10), default='INR')
+    default_payment_mode = Column(String(20), default='CASH')
+    
+    # Bank & Settlement Info
+    bank_name = Column(String(100), nullable=True)
+    bank_account_number = Column(String(50), nullable=True)
+    ifsc_code = Column(String(20), nullable=True)
+    upi_id = Column(String(50), nullable=True)
+    
+    remarks = Column(Text, nullable=True)
+    status = Column(String(20), default='ACTIVE') # ACTIVE, INACTIVE, BLOCKED
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     ledgers = relationship("PartyLedger", back_populates="party")
+    documents = relationship("PartyDocument", back_populates="party")
+
+class PartyDocument(Base):
+    __tablename__ = "party_documents"
+    
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    party_id = Column(String(36), ForeignKey("parties.id"), nullable=False, index=True)
+    document_type = Column(String(50), nullable=False) # GST_CERTIFICATE, PAN_CARD, TRADE_LICENSE, AGREEMENT
+    document_name = Column(String(100), nullable=False)
+    file_path = Column(Text, nullable=False)
+    uploaded_at = Column(DateTime, default=datetime.utcnow)
+
+    party = relationship("Party", back_populates="documents")
 
 class PartyLedger(Base):
     __tablename__ = "party_ledgers"
@@ -110,7 +144,8 @@ class PartyLedger(Base):
     party_id = Column(String(36), ForeignKey("parties.id"), nullable=False, index=True)
     date = Column(Date, nullable=False, index=True)
     voucher_number = Column(String(50), nullable=False)
-    voucher_type = Column(String(30), nullable=False)
+    voucher_type = Column(String(30), nullable=False) # OPENING_BALANCE, SALES_INVOICE, PURCHASE_INVOICE, RECEIPT, PAYMENT, SALES_RETURN, etc.
+    reference_number = Column(String(50), nullable=True)
     description = Column(Text, nullable=True)
     debit = Column(Numeric(12, 2), default=0.00)
     credit = Column(Numeric(12, 2), default=0.00)
@@ -228,7 +263,7 @@ class AuditLog(Base):
     user_id = Column(String(36), nullable=False)
     role_name = Column(String(50), nullable=True)
     module = Column(String(50), nullable=False)
-    action = Column(String(50), nullable=False) # LOGIN, LOGOUT, DELETE_INVOICE, RESTORE_DB, etc.
+    action = Column(String(50), nullable=False)
     table_name = Column(String(50), nullable=True)
     record_id = Column(String(36), nullable=True)
     old_value = Column(Text, nullable=True)
