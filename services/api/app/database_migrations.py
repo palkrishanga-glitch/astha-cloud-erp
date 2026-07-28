@@ -93,12 +93,29 @@ class DatabaseMigrationManager:
 def run_latest_migrations():
     manager = DatabaseMigrationManager()
 
-    # Migration v2.0.1: Add Performance Indexes
+    # Dynamically ensure all SQLAlchemy model columns exist in SQLite database
+    from services.api.app.models import Base
+    from services.api.app.database import engine
+    with manager.get_connection() as conn:
+        cursor = conn.cursor()
+        for table_name, table in Base.metadata.tables.items():
+            cursor.execute(f"PRAGMA table_info({table_name});")
+            existing_cols = {row[1] for row in cursor.fetchall()}
+            if existing_cols:
+                for col in table.columns:
+                    if col.name not in existing_cols:
+                        col_type = col.type.compile(engine.dialect)
+                        try:
+                            cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN {col.name} {col_type};")
+                        except Exception:
+                            pass
+        conn.commit()
+
     v2_0_1_up = """
         CREATE INDEX IF NOT EXISTS idx_sales_inv_no ON sales_invoices(invoice_no);
         CREATE INDEX IF NOT EXISTS idx_sales_date ON sales_invoices(invoice_date);
         CREATE INDEX IF NOT EXISTS idx_stock_prod_id ON stock_ledgers(product_id);
         CREATE INDEX IF NOT EXISTS idx_party_mobile ON parties(mobile);
     """
-    manager.apply_migration("v2.0.1", "Add Performance Indexes", v2_0_1_up)
+    manager.apply_migration("v2.0.1", "Add Performance Indexes and Columns", v2_0_1_up)
     return manager.get_current_version()

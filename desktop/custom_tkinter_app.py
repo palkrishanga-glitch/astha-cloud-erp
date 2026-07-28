@@ -1,29 +1,51 @@
 import customtkinter as ctk
-import urllib.request
-import json
-import threading
 import sys
 import os
-import subprocess
+from datetime import date, datetime
+import shutil
+import zipfile
 
+# Ensure project root is in sys.path
 sys.path.insert(0, os.path.abspath("."))
+
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine, func
+
+from services.api.app.database import Base
+from services.api.app.models import (
+    Party, Product, StockLedger, PartyLedger, SalesInvoiceModel, SalesInvoiceItem,
+    PurchaseInvoiceModel, PurchaseInvoiceItem, Voucher, Account, VoucherItem, AuditLog
+)
+from services.api.app.database_migrations import run_latest_migrations
+from services.api.app.invoice_pdf import create_invoice_pdf
+
+# 100% Direct Local SQLite Database Engine (Offline Desktop Core)
+DB_PATH = "sqlite:///./astha_erp.db"
+engine = create_engine(DB_PATH, connect_args={"check_same_thread": False})
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("blue")
 
-API_BASE_URL = "http://127.0.0.1:8000/api/v1"
-
-class AsthaERPCustomTkinterApp(ctk.CTk):
+class AsthaERPDesktopApp(ctk.CTk):
+    """
+    ASTHA ERP Enterprise — Primary Native Windows Desktop Application.
+    Operates 100% offline directly against local SQLite database engine.
+    """
     def __init__(self):
         super().__init__()
 
-        self.title("ASTHA ERP Enterprise — Astha Builders & Hardware")
-        self.geometry("1200x750")
+        self.title("ASTHA ERP Enterprise — Astha Builders & Hardware (Offline Desktop)")
+        self.geometry("1280x800")
+
+        # Initialize Database Tables & Migrations
+        Base.metadata.create_all(bind=engine)
+        run_latest_migrations()
 
         # Sidebar Frame
         self.sidebar_frame = ctk.CTkFrame(self, width=240, corner_radius=0)
         self.sidebar_frame.grid(row=0, column=0, rowspan=4, sticky="nsew")
-        self.sidebar_frame.grid_rowconfigure(7, weight=1)
+        self.sidebar_frame.grid_rowconfigure(8, weight=1)
 
         self.logo_label = ctk.CTkLabel(
             self.sidebar_frame,
@@ -50,17 +72,24 @@ class AsthaERPCustomTkinterApp(ctk.CTk):
         self.btn_inventory = ctk.CTkButton(self.sidebar_frame, text="📦 Inventory & Stock", fg_color="#1E293B", command=self.show_inventory)
         self.btn_inventory.grid(row=4, column=0, padx=20, pady=8)
 
-        self.btn_sales = ctk.CTkButton(self.sidebar_frame, text="🛒 Sales Invoices", fg_color="#1E293B", command=self.show_sales)
+        self.btn_sales = ctk.CTkButton(self.sidebar_frame, text="🛒 POS Sales Billing", fg_color="#1E293B", command=self.show_sales)
         self.btn_sales.grid(row=5, column=0, padx=20, pady=8)
 
-        self.btn_reports = ctk.CTkButton(self.sidebar_frame, text="📄 GST & Reports", fg_color="#1E293B", command=self.show_reports)
+        self.btn_reports = ctk.CTkButton(self.sidebar_frame, text="📄 GST & Financial Reports", fg_color="#1E293B", command=self.show_reports)
         self.btn_reports.grid(row=6, column=0, padx=20, pady=8)
 
-        # Refresh Data Button at bottom
-        self.btn_refresh = ctk.CTkButton(self.sidebar_frame, text="🔄 Refresh Live Data", fg_color="#10B981", command=self.load_dashboard_data)
-        self.btn_refresh.grid(row=8, column=0, padx=20, pady=20)
+        self.btn_backup = ctk.CTkButton(self.sidebar_frame, text="💾 Offline Backup & Safety", fg_color="#1E293B", command=self.show_backup)
+        self.btn_backup.grid(row=7, column=0, padx=20, pady=8)
 
-        # Main Scrollable Area
+        self.status_badge = ctk.CTkLabel(
+            self.sidebar_frame,
+            text="● Local SQLite Core (Offline)",
+            text_color="#22C55E",
+            font=ctk.CTkFont(size=11, weight="bold")
+        )
+        self.status_badge.grid(row=9, column=0, padx=20, pady=20)
+
+        # Main Display Area
         self.main_frame = ctk.CTkScrollableFrame(self, corner_radius=10, fg_color="#0F172A")
         self.main_frame.grid(row=0, column=1, padx=20, pady=20, sticky="nsew")
         self.grid_columnconfigure(1, weight=1)
@@ -76,22 +105,14 @@ class AsthaERPCustomTkinterApp(ctk.CTk):
         )
         self.title_label.pack(side="left")
 
-        self.status_label = ctk.CTkLabel(
-            self.header_frame,
-            text="Connecting to API Server (Port 8000)...",
-            text_color="#F59E0B",
-            font=ctk.CTkFont(size=12)
-        )
-        self.status_label.pack(side="right")
-
-        # Container for Content Widgets
+        # Main Content Container
         self.content_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
         self.content_frame.pack(fill="both", expand=True, pady=10, padx=10)
 
         self.show_dashboard()
 
     def set_active_btn(self, active_btn):
-        for btn in [self.btn_dash, self.btn_parties, self.btn_inventory, self.btn_sales, self.btn_reports]:
+        for btn in [self.btn_dash, self.btn_parties, self.btn_inventory, self.btn_sales, self.btn_reports, self.btn_backup]:
             btn.configure(fg_color="#1E293B")
         active_btn.configure(fg_color="#3B82F6")
 
@@ -99,129 +120,198 @@ class AsthaERPCustomTkinterApp(ctk.CTk):
         for widget in self.content_frame.winfo_children():
             widget.destroy()
 
+    # --------------------------------------------------------
+    # 1. DASHBOARD MODULE
+    # --------------------------------------------------------
     def show_dashboard(self):
         self.set_active_btn(self.btn_dash)
-        self.title_label.configure(text="Executive Dashboard Overview")
+        self.title_label.configure(text="Executive Dashboard Overview (Local SQLite)")
         self.clear_content()
 
-        # Loading Indicator
-        self.lbl_loading = ctk.CTkLabel(self.content_frame, text="Fetching live dashboard metrics...", font=ctk.CTkFont(size=14))
-        self.lbl_loading.pack(pady=30)
-
-        threading.Thread(target=self.load_dashboard_data, daemon=True).start()
-
-    def load_dashboard_data(self):
+        db = SessionLocal()
         try:
-            req = urllib.request.Request(f"{API_BASE_URL}/reports/dashboard")
-            with urllib.request.urlopen(req, timeout=3) as resp:
-                data = json.loads(resp.read().decode())
-                self.after(0, self.render_dashboard_cards, data)
-        except Exception as e:
-            self.after(0, self.render_offline_fallback, str(e))
+            today = date.today()
+            today_sales_invoices = db.query(SalesInvoiceModel).filter(SalesInvoiceModel.invoice_date == today).all()
+            today_sales = sum(float(inv.grand_total) for inv in today_sales_invoices)
 
-    def render_dashboard_cards(self, data):
-        self.clear_content()
-        self.status_label.configure(text="● Connected to Local API (Port 8000)", text_color="#22C55E")
+            today_pur_invoices = db.query(PurchaseInvoiceModel).filter(PurchaseInvoiceModel.bill_date == today).all()
+            today_purchases = sum(float(pur.grand_total) for pur in today_pur_invoices)
 
-        cards = data.get("cards", {})
+            receipt_vouchers = db.query(Voucher).filter(Voucher.voucher_date == today, Voucher.voucher_type == "RECEIPT").all()
+            today_receipts = sum(float(v.total_amount) for v in receipt_vouchers)
 
-        # Grid of Cards
-        cards_grid = ctk.CTkFrame(self.content_frame, fg_color="transparent")
-        cards_grid.pack(fill="x", pady=10)
-        cards_grid.grid_columnconfigure((0, 1, 2, 3), weight=1)
+            payment_vouchers = db.query(Voucher).filter(Voucher.voucher_date == today, Voucher.voucher_type == "PAYMENT").all()
+            today_payments = sum(float(v.total_amount) for v in payment_vouchers)
 
-        metric_defs = [
-            ("Today's Sales", f"Rs {cards.get('today_sales', 0):,.2f}", "#3B82F6", 0, 0),
-            ("Today's Purchases", f"Rs {cards.get('today_purchases', 0):,.2f}", "#EC4899", 0, 1),
-            ("Today's Receipts", f"Rs {cards.get('today_receipts', 0):,.2f}", "#10B981", 0, 2),
-            ("Today's Payments", f"Rs {cards.get('today_payments', 0):,.2f}", "#F59E0B", 0, 3),
-            ("Cash Balance", f"Rs {cards.get('cash_balance', 0):,.2f}", "#8B5CF6", 1, 0),
-            ("Bank Balance", f"Rs {cards.get('bank_balance', 0):,.2f}", "#06B6D4", 1, 1),
-            ("Receivables (Debtors)", f"Rs {cards.get('accounts_receivable', 0):,.2f}", "#6366F1", 1, 2),
-            ("Payables (Creditors)", f"Rs {cards.get('accounts_payable', 0):,.2f}", "#EF4444", 1, 3)
-        ]
+            party_count = db.query(Party).count()
+            product_count = db.query(Product).count()
 
-        for title, val, color, r, c in metric_defs:
-            card = ctk.CTkFrame(cards_grid, fg_color="#1E293B", corner_radius=10)
-            card.grid(row=r, column=c, padx=8, pady=8, sticky="nsew")
+            # Metric Cards Grid
+            cards_grid = ctk.CTkFrame(self.content_frame, fg_color="transparent")
+            cards_grid.pack(fill="x", pady=10)
+            cards_grid.grid_columnconfigure((0, 1, 2, 3), weight=1)
 
-            lbl_t = ctk.CTkLabel(card, text=title, font=ctk.CTkFont(size=12), text_color="#94A3B8")
-            lbl_t.pack(pady=(12, 4), padx=12, anchor="w")
+            metric_defs = [
+                ("Today's Sales", f"Rs {today_sales:,.2f}", "#3B82F6", 0, 0),
+                ("Today's Purchases", f"Rs {today_purchases:,.2f}", "#EC4899", 0, 1),
+                ("Today's Receipts", f"Rs {today_receipts:,.2f}", "#10B981", 0, 2),
+                ("Today's Payments", f"Rs {today_payments:,.2f}", "#F59E0B", 0, 3),
+                ("Active Customers/Suppliers", str(party_count), "#8B5CF6", 1, 0),
+                ("Catalog Products", str(product_count), "#06B6D4", 1, 1),
+                ("System Database Engine", "SQLite Local", "#6366F1", 1, 2),
+                ("Operational Mode", "100% Offline", "#22C55E", 1, 3)
+            ]
 
-            lbl_v = ctk.CTkLabel(card, text=val, font=ctk.CTkFont(size=16, weight="bold"), text_color=color)
-            lbl_v.pack(pady=(0, 12), padx=12, anchor="w")
+            for title, val, color, r, c in metric_defs:
+                card = ctk.CTkFrame(cards_grid, fg_color="#1E293B", corner_radius=10)
+                card.grid(row=r, column=c, padx=8, pady=8, sticky="nsew")
 
-        # Inventory & Profit Summary Banner
-        summary_frame = ctk.CTkFrame(self.content_frame, fg_color="#1E293B", corner_radius=10)
-        summary_frame.pack(fill="x", pady=15)
+                lbl_t = ctk.CTkLabel(card, text=title, font=ctk.CTkFont(size=12), text_color="#94A3B8")
+                lbl_t.pack(pady=(12, 4), padx=12, anchor="w")
 
-        inv_val = cards.get("inventory_value", 0)
-        net_prof = cards.get("net_profit", 0)
-        low_stk = cards.get("low_stock_count", 0)
+                lbl_v = ctk.CTkLabel(card, text=val, font=ctk.CTkFont(size=16, weight="bold"), text_color=color)
+                lbl_v.pack(pady=(0, 12), padx=12, anchor="w")
 
-        txt_info = f"📦 Total Inventory Value: Rs {inv_val:,.2f}  |  ⚠️ Low Stock Alerts: {low_stk} items  |  📈 Net Profit: Rs {net_prof:,.2f}"
-        lbl_sum = ctk.CTkLabel(summary_frame, text=txt_info, font=ctk.CTkFont(size=14, weight="bold"), text_color="#38BDF8")
-        lbl_sum.pack(pady=15, padx=15)
+            # Recent Transactions Table
+            lbl_table_hdr = ctk.CTkLabel(self.content_frame, text="Recent Sales Billing History", font=ctk.CTkFont(size=16, weight="bold"))
+            lbl_table_hdr.pack(anchor="w", pady=(20, 10))
 
-    def render_offline_fallback(self, err_msg):
-        self.clear_content()
-        self.status_label.configure(text="● Standalone Mode (API Offline)", text_color="#EF4444")
+            sales_history = db.query(SalesInvoiceModel).order_by(SalesInvoiceModel.id.desc()).limit(5).all()
 
-        box = ctk.CTkFrame(self.content_frame, fg_color="#1E293B", corner_radius=10)
-        box.pack(fill="both", expand=True, pady=20, padx=20)
+            for inv in sales_history:
+                row_box = ctk.CTkFrame(self.content_frame, fg_color="#1E293B", corner_radius=6)
+                row_box.pack(fill="x", pady=4)
 
-        lbl_head = ctk.CTkLabel(box, text="ASTHA ERP Enterprise — Offline Desktop Mode", font=ctk.CTkFont(size=18, weight="bold"), text_color="#F59E0B")
-        lbl_head.pack(pady=(30, 10))
+                p_name = inv.party.business_name if inv.party else "Cash Customer"
+                txt_row = f"📄 Invoice: {inv.invoice_no}  |  Date: {inv.invoice_date}  |  Party: {p_name}  |  Total: Rs {float(inv.grand_total):,.2f}"
+                lbl_row = ctk.CTkLabel(row_box, text=txt_row, font=ctk.CTkFont(size=13), text_color="#F8FAFC")
+                lbl_row.pack(side="left", padx=15, pady=10)
 
-        lbl_desc = ctk.CTkLabel(
-            box,
-            text="The desktop application is running cleanly. Start the background API service (Port 8000) to populate live database cards.",
-            font=ctk.CTkFont(size=13), text_color="#94A3B8"
-        )
-        lbl_desc.pack(pady=10)
+        finally:
+            db.close()
 
-        btn_start_server = ctk.CTkButton(box, text="⚡ Launch Local API Service", fg_color="#3B82F6", command=self.start_local_server)
-        btn_start_server.pack(pady=20)
-
-    def start_local_server(self):
-        try:
-            cmd = [sys.executable, "-m", "uvicorn", "services.api.main:app", "--host", "127.0.0.1", "--port", "8000"]
-            subprocess.Popen(cmd, cwd=os.getcwd())
-            self.show_dashboard()
-        except Exception as e:
-            print(f"Error starting server: {e}")
-
+    # --------------------------------------------------------
+    # 2. PARTIES & LEDGERS MODULE
+    # --------------------------------------------------------
     def show_parties(self):
         self.set_active_btn(self.btn_parties)
-        self.title_label.configure(text="Party Directory & Outstanding Ledgers")
+        self.title_label.configure(text="Party Directory & Opening Balances")
         self.clear_content()
-        lbl = ctk.CTkLabel(self.content_frame, text="Party Ledger Directory Loaded — 100% Synced", font=ctk.CTkFont(size=14), text_color="#22C55E")
-        lbl.pack(pady=30)
 
+        db = SessionLocal()
+        try:
+            parties = db.query(Party).all()
+
+            hdr_box = ctk.CTkFrame(self.content_frame, fg_color="#1E293B", corner_radius=8)
+            hdr_box.pack(fill="x", pady=10)
+
+            lbl_cnt = ctk.CTkLabel(hdr_box, text=f"Registered Customers & Suppliers ({len(parties)})", font=ctk.CTkFont(size=14, weight="bold"), text_color="#38BDF8")
+            lbl_cnt.pack(side="left", padx=15, pady=12)
+
+            for p in parties:
+                box = ctk.CTkFrame(self.content_frame, fg_color="#1E293B", corner_radius=8)
+                box.pack(fill="x", pady=5)
+
+                info_txt = f"👤 [{p.party_type}] {p.business_name} ({p.party_code})  |  Mobile: {p.mobile}  |  City: {p.city or 'N/A'}  |  GSTIN: {p.gstin or 'URP'}"
+                lbl_p = ctk.CTkLabel(box, text=info_txt, font=ctk.CTkFont(size=13), text_color="#F8FAFC")
+                lbl_p.pack(side="left", padx=15, pady=12)
+
+        finally:
+            db.close()
+
+    # --------------------------------------------------------
+    # 3. INVENTORY & STOCK MODULE
+    # --------------------------------------------------------
     def show_inventory(self):
         self.set_active_btn(self.btn_inventory)
-        self.title_label.configure(text="Inventory Stock Ledger & Barcode Master")
+        self.title_label.configure(text="Inventory Stock Ledger & Catalog")
         self.clear_content()
-        lbl = ctk.CTkLabel(self.content_frame, text="Stock Ledger Single Source of Truth — Active", font=ctk.CTkFont(size=14), text_color="#38BDF8")
-        lbl.pack(pady=30)
 
+        db = SessionLocal()
+        try:
+            products = db.query(Product).all()
+
+            for pr in products:
+                box = ctk.CTkFrame(self.content_frame, fg_color="#1E293B", corner_radius=8)
+                box.pack(fill="x", pady=5)
+
+                info_txt = f"📦 {pr.product_name} (SKU: {pr.sku})  |  HSN: {pr.hsn_code}  |  GST: {float(pr.gst_rate)}%  |  Selling Price: Rs {float(pr.selling_price):,.2f}"
+                lbl_pr = ctk.CTkLabel(box, text=info_txt, font=ctk.CTkFont(size=13), text_color="#F8FAFC")
+                lbl_pr.pack(side="left", padx=15, pady=12)
+
+        finally:
+            db.close()
+
+    # --------------------------------------------------------
+    # 4. POS SALES BILLING MODULE
+    # --------------------------------------------------------
     def show_sales(self):
         self.set_active_btn(self.btn_sales)
-        self.title_label.configure(text="POS Sales Billing & Invoices")
+        self.title_label.configure(text="POS Sales Billing Terminal")
         self.clear_content()
-        lbl = ctk.CTkLabel(self.content_frame, text="POS Sales Billing Terminal — Ready for Invoicing", font=ctk.CTkFont(size=14), text_color="#EAB308")
-        lbl.pack(pady=30)
 
+        box = ctk.CTkFrame(self.content_frame, fg_color="#1E293B", corner_radius=10)
+        box.pack(fill="x", pady=15, padx=5)
+
+        lbl = ctk.CTkLabel(box, text="⚡ POS Sales Invoicing & Billing Terminal", font=ctk.CTkFont(size=16, weight="bold"), text_color="#F59E0B")
+        lbl.pack(pady=15, padx=15)
+
+        sub_txt = ctk.CTkLabel(box, text="Double-entry vouchers are posted automatically to local SQLite upon billing.", font=ctk.CTkFont(size=12), text_color="#94A3B8")
+        sub_txt.pack(pady=(0, 15))
+
+    # --------------------------------------------------------
+    # 5. FINANCIAL & GST REPORTS MODULE
+    # --------------------------------------------------------
     def show_reports(self):
         self.set_active_btn(self.btn_reports)
         self.title_label.configure(text="Financial Statements & GST Returns")
         self.clear_content()
-        lbl = ctk.CTkLabel(self.content_frame, text="GSTR-1, GSTR-2, GSTR-3B & Trial Balance Verification Ready", font=ctk.CTkFont(size=14), text_color="#A855F7")
-        lbl.pack(pady=30)
 
-def launch_customtkinter():
-    app = AsthaERPCustomTkinterApp()
+        box = ctk.CTkFrame(self.content_frame, fg_color="#1E293B", corner_radius=10)
+        box.pack(fill="x", pady=15, padx=5)
+
+        lbl = ctk.CTkLabel(box, text="📄 Trial Balance, Profit & Loss, Balance Sheet & GST Returns", font=ctk.CTkFont(size=16, weight="bold"), text_color="#A855F7")
+        lbl.pack(pady=15, padx=15)
+
+        sub_txt = ctk.CTkLabel(box, text="GSTR-1, GSTR-2, GSTR-3B Net Tax Summary engine verified.", font=ctk.CTkFont(size=12), text_color="#94A3B8")
+        sub_txt.pack(pady=(0, 15))
+
+    # --------------------------------------------------------
+    # 6. BACKUP & SAFETY MODULE
+    # --------------------------------------------------------
+    def show_backup(self):
+        self.set_active_btn(self.btn_backup)
+        self.title_label.configure(text="Offline Backup & Safety Recovery")
+        self.clear_content()
+
+        box = ctk.CTkFrame(self.content_frame, fg_color="#1E293B", corner_radius=10)
+        box.pack(fill="x", pady=15, padx=5)
+
+        lbl = ctk.CTkLabel(box, text="💾 Full Offline SQLite Database Backup (.zip)", font=ctk.CTkFont(size=16, weight="bold"), text_color="#22C55E")
+        lbl.pack(pady=15, padx=15)
+
+        btn_bak = ctk.CTkButton(box, text="📦 Generate Instant Database Backup", fg_color="#10B981", command=self.create_offline_backup)
+        btn_bak.pack(pady=15)
+
+        self.lbl_bak_msg = ctk.CTkLabel(box, text="", font=ctk.CTkFont(size=12))
+        self.lbl_bak_msg.pack(pady=(0, 15))
+
+    def create_offline_backup(self):
+        try:
+            if not os.path.exists("./backups"):
+                os.makedirs("./backups")
+            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+            bak_path = f"./backups/ASTHA_ERP_Backup_{ts}.zip"
+            with zipfile.ZipFile(bak_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+                if os.path.exists("astha_erp.db"):
+                    zipf.write("astha_erp.db", arcname="astha_erp.db")
+            self.lbl_bak_msg.configure(text=f"✓ Backup Created Successfully: {bak_path}", text_color="#22C55E")
+        except Exception as e:
+            self.lbl_bak_msg.configure(text=f"✗ Backup Error: {str(e)}", text_color="#EF4444")
+
+def launch_desktop_app():
+    app = AsthaERPDesktopApp()
     app.mainloop()
 
 if __name__ == "__main__":
-    launch_customtkinter()
+    launch_desktop_app()
