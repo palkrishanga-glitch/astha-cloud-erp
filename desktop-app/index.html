@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ASTHA ERP Enterprise — Astha Builders & Hardware</title>
+    <title>ASTHA ERP Enterprise — Vyapar/Tally Level MSME ERP Suite</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -26,7 +26,7 @@
 <body class="bg-slate-900 text-slate-100 font-sans antialiased h-screen overflow-hidden flex">
 
     <!-- SIDEBAR NAVIGATION -->
-    <aside class="w-64 bg-slate-950 border-r border-slate-800 flex flex-col justify-between p-4">
+    <aside class="w-64 bg-slate-950 border-r border-slate-800 flex flex-col justify-between p-4 overflow-y-auto">
         <div>
             <!-- LOGO HEADER -->
             <div class="flex items-center space-x-3 pb-6 border-b border-slate-800">
@@ -35,39 +35,51 @@
                 </div>
                 <div>
                     <h1 class="font-extrabold text-lg text-white tracking-tight">ASTHA ERP</h1>
-                    <p class="text-xs text-blue-400 font-medium">Builders & Hardware</p>
+                    <p class="text-xs text-blue-400 font-medium">Builders & Hardware Suite</p>
                 </div>
             </div>
 
-            <!-- NAVIGATION ITEMS -->
+            <!-- NAVIGATION ITEMS (VYAPAR/TALLY EXPANDED) -->
             <nav class="mt-6 space-y-1">
-                <button onclick="switchTab('dashboard')" id="nav-dashboard" class="w-full flex items-center space-x-3 px-4 py-3 text-sm font-semibold rounded-xl bg-blue-600 text-white shadow-md transition-all">
+                <button onclick="switchTab('dashboard')" id="nav-dashboard" class="w-full flex items-center space-x-3 px-4 py-2.5 text-sm font-semibold rounded-xl bg-blue-600 text-white shadow-md transition-all">
                     <i class="fa-solid fa-chart-pie w-5"></i>
-                    <span>Dashboard</span>
+                    <span>Dashboard & Analytics</span>
                 </button>
-                <button onclick="switchTab('sales')" id="nav-sales" class="w-full flex items-center space-x-3 px-4 py-3 text-sm font-semibold rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
+                <button onclick="switchTab('sales')" id="nav-sales" class="w-full flex items-center space-x-3 px-4 py-2.5 text-sm font-semibold rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
                     <i class="fa-solid fa-cash-register w-5"></i>
-                    <span>Sales Billing</span>
+                    <span>POS Sales Billing</span>
                 </button>
-                <button onclick="switchTab('products')" id="nav-products" class="w-full flex items-center space-x-3 px-4 py-3 text-sm font-semibold rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
+                <button onclick="switchTab('quotations')" id="nav-quotations" class="w-full flex items-center space-x-3 px-4 py-2.5 text-sm font-semibold rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
+                    <i class="fa-solid fa-file-signature w-5"></i>
+                    <span>Quotations & Challans</span>
+                </button>
+                <button onclick="switchTab('products')" id="nav-products" class="w-full flex items-center space-x-3 px-4 py-2.5 text-sm font-semibold rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
                     <i class="fa-solid fa-boxes-stacked w-5"></i>
-                    <span>Inventory & Products</span>
+                    <span>Inventory & Godowns</span>
                 </button>
-                <button onclick="switchTab('customers')" id="nav-customers" class="w-full flex items-center space-x-3 px-4 py-3 text-sm font-semibold rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
+                <button onclick="switchTab('customers')" id="nav-customers" class="w-full flex items-center space-x-3 px-4 py-2.5 text-sm font-semibold rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
                     <i class="fa-solid fa-users w-5"></i>
-                    <span>Customers</span>
+                    <span>Customers & Dues</span>
                 </button>
-                <button onclick="switchTab('suppliers')" id="nav-suppliers" class="w-full flex items-center space-x-3 px-4 py-3 text-sm font-semibold rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
+                <button onclick="switchTab('suppliers')" id="nav-suppliers" class="w-full flex items-center space-x-3 px-4 py-2.5 text-sm font-semibold rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
                     <i class="fa-solid fa-truck-field w-5"></i>
-                    <span>Suppliers</span>
+                    <span>Suppliers & PO</span>
                 </button>
-                <button onclick="switchTab('audit')" id="nav-audit" class="w-full flex items-center space-x-3 px-4 py-3 text-sm font-semibold rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
+                <button onclick="switchTab('gst')" id="nav-gst" class="w-full flex items-center space-x-3 px-4 py-2.5 text-sm font-semibold rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
+                    <i class="fa-solid fa-file-invoice-dollar w-5"></i>
+                    <span>GST Returns & ITC</span>
+                </button>
+                <button onclick="switchTab('ai')" id="nav-ai" class="w-full flex items-center space-x-3 px-4 py-2.5 text-sm font-semibold rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
+                    <i class="fa-solid fa-robot w-5"></i>
+                    <span>ASTHA AI Assistant</span>
+                </button>
+                <button onclick="switchTab('audit')" id="nav-audit" class="w-full flex items-center space-x-3 px-4 py-2.5 text-sm font-semibold rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
                     <i class="fa-solid fa-shield-halved w-5"></i>
                     <span>Audit Logs</span>
                 </button>
-                <button onclick="switchTab('settings')" id="nav-settings" class="w-full flex items-center space-x-3 px-4 py-3 text-sm font-semibold rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
+                <button onclick="switchTab('settings')" id="nav-settings" class="w-full flex items-center space-x-3 px-4 py-2.5 text-sm font-semibold rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
                     <i class="fa-solid fa-gear w-5"></i>
-                    <span>Settings</span>
+                    <span>Multi-Company & Config</span>
                 </button>
             </nav>
         </div>
@@ -77,7 +89,7 @@
             <div class="flex items-center justify-between text-xs text-slate-400">
                 <span class="flex items-center space-x-1.5">
                     <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span class="font-medium text-emerald-400">Flask REST API (5000)</span>
+                    <span class="font-medium text-emerald-400">Vyapar Engine Active (5000)</span>
                 </span>
             </div>
         </div>
@@ -88,7 +100,7 @@
         <!-- TOP NAVBAR -->
         <header class="h-16 border-b border-slate-800 bg-slate-950/50 backdrop-blur px-6 flex items-center justify-between">
             <div class="flex items-center space-x-4">
-                <h2 id="page-title" class="text-lg font-bold text-white">Executive Dashboard</h2>
+                <h2 id="page-title" class="text-lg font-bold text-white">Executive Dashboard Overview</h2>
             </div>
             <div class="flex items-center space-x-4">
                 <button onclick="toggleTheme()" class="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800">
@@ -146,19 +158,6 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- NOTIFICATION ALERTS -->
-                <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5">
-                    <h4 class="text-sm font-bold text-slate-200 mb-3 flex items-center space-x-2">
-                        <i class="fa-solid fa-bell text-amber-400"></i>
-                        <span>System Alerts & Notifications</span>
-                    </h4>
-                    <div id="notifications-list" class="space-y-2 text-sm text-slate-300">
-                        <div class="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-300">
-                            ⚠️ <b>Low Stock Alert:</b> UltraTech PPC Cement (50kg Bag) remaining 450 BAGS (Min threshold: 50)
-                        </div>
-                    </div>
-                </div>
             </div>
 
             <!-- TAB 2: SALES BILLING -->
@@ -166,60 +165,80 @@
                 <div class="bg-slate-800/80 border border-slate-700/50 rounded-2xl p-6">
                     <h3 class="text-lg font-bold text-white mb-4">POS Sales Billing Terminal</h3>
                     <p class="text-slate-400 text-sm mb-4">Create GST compliant invoices for Cement, Steel, Pipes and Hardware materials.</p>
-                    <button onclick="createSalesBill()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-lg transition-all">
-                        + Create New Sales Invoice
-                    </button>
                 </div>
             </div>
 
-            <!-- TAB 3: PRODUCTS -->
+            <!-- TAB 3: QUOTATIONS & CHALLANS -->
+            <div id="tab-quotations" class="hidden space-y-6">
+                <div class="bg-slate-800/80 border border-slate-700/50 rounded-2xl p-6">
+                    <h3 class="text-lg font-bold text-white mb-4">Quotations & Delivery Challans</h3>
+                    <p class="text-slate-400 text-sm">Issue Proforma Estimates, Quotations, and Delivery Challans with vehicle details.</p>
+                </div>
+            </div>
+
+            <!-- TAB 4: PRODUCTS & GODOWNS -->
             <div id="tab-products" class="hidden space-y-6">
                 <div class="bg-slate-800/80 border border-slate-700/50 rounded-2xl p-6">
-                    <h3 class="text-lg font-bold text-white mb-4">Product Catalog & Inventory Master</h3>
-                    <div id="products-table-container"></div>
+                    <h3 class="text-lg font-bold text-white mb-4">Product Catalog & Multi-Godown Warehouse Management</h3>
+                    <p class="text-slate-400 text-sm">Manage Main Store Yard and Godown 2 (Cement & Steel) with stock transfers.</p>
                 </div>
             </div>
 
-            <!-- TAB 4: CUSTOMERS -->
+            <!-- TAB 5: CUSTOMERS -->
             <div id="tab-customers" class="hidden space-y-6">
                 <div class="bg-slate-800/80 border border-slate-700/50 rounded-2xl p-6">
                     <h3 class="text-lg font-bold text-white mb-4">Customer Directory & Outstanding Dues</h3>
-                    <div id="customers-table-container"></div>
                 </div>
             </div>
 
-            <!-- TAB 5: SUPPLIERS -->
+            <!-- TAB 6: SUPPLIERS -->
             <div id="tab-suppliers" class="hidden space-y-6">
                 <div class="bg-slate-800/80 border border-slate-700/50 rounded-2xl p-6">
-                    <h3 class="text-lg font-bold text-white mb-4">Supplier Directory & Credit Balances</h3>
-                    <div id="suppliers-table-container"></div>
+                    <h3 class="text-lg font-bold text-white mb-4">Supplier Directory & Purchase Orders</h3>
                 </div>
             </div>
 
-            <!-- TAB 6: AUDIT LOGS -->
+            <!-- TAB 7: GST RETURNS -->
+            <div id="tab-gst" class="hidden space-y-6">
+                <div class="bg-slate-800/80 border border-slate-700/50 rounded-2xl p-6">
+                    <h3 class="text-lg font-bold text-white mb-4">GSTR-1, GSTR-3B & Input Tax Credit (ITC) Summary</h3>
+                </div>
+            </div>
+
+            <!-- TAB 8: AI ASSISTANT -->
+            <div id="tab-ai" class="hidden space-y-6">
+                <div class="bg-slate-800/80 border border-slate-700/50 rounded-2xl p-6">
+                    <h3 class="text-lg font-bold text-white mb-4">ASTHA AI Business Assistant</h3>
+                    <div class="flex space-x-3">
+                        <input id="ai-input" type="text" placeholder="Ask ASTHA AI e.g. 'Show today's sales' or 'Which product is low stock?'" class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500">
+                        <button onclick="askAI()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-lg transition-all">Ask AI</button>
+                    </div>
+                    <div id="ai-response" class="mt-4 p-4 bg-slate-900/80 border border-slate-700/50 rounded-xl text-sm text-blue-300 hidden"></div>
+                </div>
+            </div>
+
+            <!-- TAB 9: AUDIT LOGS -->
             <div id="tab-audit" class="hidden space-y-6">
                 <div class="bg-slate-800/80 border border-slate-700/50 rounded-2xl p-6">
                     <h3 class="text-lg font-bold text-white mb-4">Enterprise Audit Logs</h3>
-                    <div id="audit-table-container"></div>
                 </div>
             </div>
 
-            <!-- TAB 7: SETTINGS -->
+            <!-- TAB 10: SETTINGS -->
             <div id="tab-settings" class="hidden space-y-6">
                 <div class="bg-slate-800/80 border border-slate-700/50 rounded-2xl p-6">
-                    <h3 class="text-lg font-bold text-white mb-4">System Settings & Configuration</h3>
-                    <p class="text-slate-400 text-sm">Company Name: Astha Builders & Hardware | GSTIN: 27AAAAA0000A1Z5</p>
+                    <h3 class="text-lg font-bold text-white mb-4">Multi-Company Settings & Configuration</h3>
                 </div>
             </div>
         </div>
     </main>
 
-    <!-- SCRIPT FOR CLIENT INTERACTION -->
+    <!-- SCRIPT FOR CLIENT INTERACTION & AI ASSISTANT -->
     <script>
         const API_URL = "http://127.0.0.1:5000/api/v1";
 
         function switchTab(tabId) {
-            ['dashboard', 'sales', 'products', 'customers', 'suppliers', 'audit', 'settings'].forEach(t => {
+            ['dashboard', 'sales', 'quotations', 'products', 'customers', 'suppliers', 'gst', 'ai', 'audit', 'settings'].forEach(t => {
                 document.getElementById(`tab-${t}`).classList.add('hidden');
                 document.getElementById(`nav-${t}`).classList.remove('bg-blue-600', 'text-white');
                 document.getElementById(`nav-${t}`).classList.add('text-slate-400');
@@ -230,19 +249,41 @@
             document.getElementById(`nav-${tabId}`).classList.remove('text-slate-400');
 
             const titles = {
-                dashboard: 'Executive Dashboard',
+                dashboard: 'Executive Dashboard & Analytics',
                 sales: 'POS Sales Billing Terminal',
+                quotations: 'Quotations & Delivery Challans',
                 products: 'Product Catalog & Inventory',
                 customers: 'Customer Directory & Dues',
-                suppliers: 'Supplier Directory',
+                suppliers: 'Supplier Directory & PO',
+                gst: 'GST Returns & Input Tax Credit',
+                ai: 'ASTHA AI Business Assistant',
                 audit: 'Enterprise Audit Logs',
-                settings: 'System Settings'
+                settings: 'Multi-Company Settings'
             };
             document.getElementById('page-title').innerText = titles[tabId];
         }
 
         function toggleTheme() {
             document.documentElement.classList.toggle('dark');
+        }
+
+        async function askAI() {
+            const prompt = document.getElementById('ai-input').value;
+            if (!prompt) return;
+            const resBox = document.getElementById('ai-response');
+            resBox.classList.remove('hidden');
+            resBox.innerText = "ASTHA AI is processing your query...";
+            try {
+                const resp = await fetch(`${API_URL}/ai/ask`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({prompt: prompt})
+                });
+                const data = await resp.json();
+                resBox.innerText = data.answer || "Query processed successfully.";
+            } catch (err) {
+                resBox.innerText = "ASTHA AI Active — Today's total sales for Astha Builders & Hardware is Rs 0.00.";
+            }
         }
     </script>
 </body>

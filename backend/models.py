@@ -1,22 +1,43 @@
 import os
 from datetime import datetime, date
 from sqlalchemy import (
-    create_engine, Column, Integer, String, Numeric, Boolean, Date, DateTime, Text, ForeignKey, Enum
+    create_engine, Column, Integer, String, Numeric, Boolean, Date, DateTime, Text, ForeignKey
 )
-from sqlalchemy.orm import declarative_base, sessionmaker, relationship
+from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
+
+class Company(Base):
+    __tablename__ = "companies"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_name = Column(String(150), nullable=False)
+    gstin = Column(String(20), nullable=True)
+    address = Column(Text, nullable=True)
+    phone = Column(String(20), nullable=True)
+    email = Column(String(100), nullable=True)
+    bank_details = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=True)
     name = Column(String(100), nullable=False)
     email = Column(String(120), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
     role = Column(String(50), nullable=False, default="Staff") # Admin, Manager, Accountant, Staff
     status = Column(String(20), nullable=False, default="ACTIVE")
     created_at = Column(DateTime, default=datetime.utcnow)
+
+class Warehouse(Base):
+    __tablename__ = "warehouses"
+
+    id = Column(Integer, primary_key=True, index=True)
+    warehouse_name = Column(String(100), nullable=False)
+    location = Column(String(200), nullable=True)
+    is_main = Column(Boolean, default=False)
 
 class Customer(Base):
     __tablename__ = "customers"
@@ -29,6 +50,7 @@ class Customer(Base):
     gst_number = Column(String(20), nullable=True)
     opening_balance = Column(Numeric(12, 2), default=0.00)
     credit_limit = Column(Numeric(12, 2), default=0.00)
+    customer_group = Column(String(50), default="Retail")
     status = Column(String(20), default="ACTIVE")
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -57,7 +79,8 @@ class Product(Base):
     product_name = Column(String(200), nullable=False, index=True)
     category = Column(String(100), nullable=False, index=True) # Cement, TMT Steel, Hardware, Pipes
     brand = Column(String(100), nullable=True)
-    unit = Column(String(20), nullable=False, default="PCS") # BAGS, TON, PCS, MTR
+    unit = Column(String(20), nullable=False, default="PCS") # BAGS, TON, PCS, MTR, KG
+    barcode = Column(String(50), unique=True, nullable=True)
     purchase_price = Column(Numeric(12, 2), nullable=False, default=0.00)
     selling_price = Column(Numeric(12, 2), nullable=False, default=0.00)
     gst_rate = Column(Numeric(5, 2), nullable=False, default=18.00)
@@ -67,11 +90,43 @@ class Product(Base):
     status = Column(String(20), default="ACTIVE")
     created_at = Column(DateTime, default=datetime.utcnow)
 
+class Quotation(Base):
+    __tablename__ = "quotations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    quotation_no = Column(String(50), unique=True, nullable=False)
+    customer_id = Column(Integer, ForeignKey("customers.id"), nullable=True)
+    quotation_date = Column(Date, default=date.today)
+    total_amount = Column(Numeric(12, 2), default=0.00)
+    status = Column(String(20), default="PENDING") # PENDING, APPROVED, CONVERTED
+
+class DeliveryChallan(Base):
+    __tablename__ = "delivery_challans"
+
+    id = Column(Integer, primary_key=True, index=True)
+    challan_no = Column(String(50), unique=True, nullable=False)
+    customer_id = Column(Integer, ForeignKey("customers.id"), nullable=True)
+    driver_name = Column(String(100), nullable=True)
+    vehicle_number = Column(String(30), nullable=True)
+    challan_date = Column(Date, default=date.today)
+    status = Column(String(20), default="DISPATCHED")
+
+class PurchaseOrder(Base):
+    __tablename__ = "purchase_orders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    po_number = Column(String(50), unique=True, nullable=False)
+    supplier_id = Column(Integer, ForeignKey("suppliers.id"), nullable=False)
+    po_date = Column(Date, default=date.today)
+    total_amount = Column(Numeric(12, 2), default=0.00)
+    status = Column(String(20), default="ISSUED")
+
 class SalesInvoice(Base):
     __tablename__ = "sales_invoices"
 
     id = Column(Integer, primary_key=True, index=True)
     invoice_no = Column(String(50), unique=True, nullable=False, index=True)
+    invoice_type = Column(String(30), default="GST Invoice") # GST Invoice, Retail, Wholesale, Proforma
     customer_id = Column(Integer, ForeignKey("customers.id"), nullable=True)
     invoice_date = Column(Date, nullable=False, default=date.today)
     subtotal = Column(Numeric(12, 2), nullable=False, default=0.00)
@@ -79,8 +134,10 @@ class SalesInvoice(Base):
     sgst_amount = Column(Numeric(12, 2), nullable=False, default=0.00)
     igst_amount = Column(Numeric(12, 2), nullable=False, default=0.00)
     grand_total = Column(Numeric(12, 2), nullable=False, default=0.00)
-    payment_mode = Column(String(50), nullable=False, default="CASH") # CASH, BANK, UPI, CREDIT
+    payment_mode = Column(String(50), nullable=False, default="CASH")
     payment_status = Column(String(20), nullable=False, default="PAID")
+    vehicle_number = Column(String(30), nullable=True)
+    eway_bill_no = Column(String(50), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     customer = relationship("Customer", back_populates="sales")
@@ -130,6 +187,17 @@ class PurchaseItem(Base):
     invoice = relationship("PurchaseInvoice", back_populates="items")
     product = relationship("Product")
 
+class StockTransfer(Base):
+    __tablename__ = "stock_transfers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    from_warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False)
+    to_warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    quantity = Column(Numeric(12, 2), nullable=False)
+    transfer_date = Column(Date, default=date.today)
+    notes = Column(Text, nullable=True)
+
 class Employee(Base):
     __tablename__ = "employees"
 
@@ -141,12 +209,20 @@ class Employee(Base):
     joining_date = Column(Date, nullable=False, default=date.today)
     status = Column(String(20), default="ACTIVE")
 
+class Attendance(Base):
+    __tablename__ = "attendances"
+
+    id = Column(Integer, primary_key=True, index=True)
+    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False)
+    attendance_date = Column(Date, default=date.today)
+    status = Column(String(20), default="PRESENT") # PRESENT, ABSENT, LEAVE, HALF_DAY
+
 class Expense(Base):
     __tablename__ = "expenses"
 
     id = Column(Integer, primary_key=True, index=True)
     expense_name = Column(String(150), nullable=False)
-    category = Column(String(50), nullable=False) # Transport, Salary, Electricity, Maintenance, Other
+    category = Column(String(50), nullable=False)
     amount = Column(Numeric(12, 2), nullable=False)
     expense_date = Column(Date, nullable=False, default=date.today)
     notes = Column(Text, nullable=True)
