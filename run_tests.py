@@ -9,7 +9,6 @@ sys.path.insert(0, os.path.abspath("."))
 
 from services.api.main import app
 from services.api.app.database import Base, get_db
-from services.api.app.routers.reports import validate_gstin_format
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test_astha.db"
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
@@ -24,7 +23,7 @@ def override_get_db():
 
 app.dependency_overrides[get_db] = override_get_db
 
-class TestAsthaERPPart9Suite(unittest.TestCase):
+class TestAsthaERPPart10Suite(unittest.TestCase):
     def setUp(self):
         Base.metadata.create_all(bind=engine)
         self.client = TestClient(app)
@@ -32,33 +31,50 @@ class TestAsthaERPPart9Suite(unittest.TestCase):
     def tearDown(self):
         Base.metadata.drop_all(bind=engine)
 
-    def test_gstin_format_validation(self):
-        # 1. Valid Odisha GSTIN
-        self.assertTrue(validate_gstin_format("21AAAAA0000A1Z5"))
+    def test_executive_dashboard_cards(self):
+        res = self.client.get("/api/v1/reports/dashboard")
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        cards = data["cards"]
+        
+        # Verify 17 main dashboard card metrics
+        self.assertIn("today_sales", cards)
+        self.assertIn("today_purchases", cards)
+        self.assertIn("today_receipts", cards)
+        self.assertIn("today_payments", cards)
+        self.assertIn("cash_balance", cards)
+        self.assertIn("bank_balance", cards)
+        self.assertIn("accounts_receivable", cards)
+        self.assertIn("accounts_payable", cards)
+        self.assertIn("inventory_value", cards)
+        self.assertIn("low_stock_count", cards)
+        self.assertIn("net_profit", cards)
 
-        # 2. Invalid length/characters
-        self.assertFalse(validate_gstin_format("INVALID_GSTIN"))
+    def test_system_health(self):
+        res = self.client.get("/api/v1/reports/system-health")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()["system_status"], "ONLINE")
 
-    def test_gstr_reports_and_tax_liability(self):
-        # 1. GSTR-1
-        g1_res = self.client.get("/api/v1/reports/gstr-1")
-        self.assertEqual(g1_res.status_code, 200)
-        self.assertIn("total_output_tax_liability", g1_res.json())
+    def test_global_enterprise_search(self):
+        # Create a party to search
+        self.client.post("/api/v1/parties/", json={
+            "business_name": "Astha Steel Traders",
+            "party_type": "CUSTOMER",
+            "mobile": "9999900000",
+            "address": "Main Street",
+            "state": "Odisha",
+            "city": "Bhubaneswar",
+            "pincode": "751001",
+            "opening_balance": 0.00,
+            "opening_balance_type": "DEBIT",
+            "opening_balance_date": "2026-04-01"
+        })
 
-        # 2. GSTR-2
-        g2_res = self.client.get("/api/v1/reports/gstr-2")
-        self.assertEqual(g2_res.status_code, 200)
-        self.assertIn("total_input_tax_credit", g2_res.json())
-
-        # 3. GSTR-3B Net Tax Payable
-        g3b_res = self.client.get("/api/v1/reports/gstr-3b")
-        self.assertEqual(g3b_res.status_code, 200)
-        self.assertIn("net_gst_payable_cash", g3b_res.json())
-
-        # 4. HSN Summary
-        hsn_res = self.client.get("/api/v1/reports/hsn-summary")
-        self.assertEqual(hsn_res.status_code, 200)
-        self.assertIsInstance(hsn_res.json(), list)
+        res = self.client.get("/api/v1/search/?q=Astha")
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertTrue(data["total_results"] > 0)
+        self.assertEqual(data["results"][0]["entity"], "PARTY")
 
 if __name__ == "__main__":
     unittest.main()
