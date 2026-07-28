@@ -1,0 +1,40 @@
+name: ASTHA ERP Enterprise CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test_and_build:
+    name: Build, Test & Verify Production Deployment
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v3
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Project Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Master Regression Test Suite
+        run: |
+          python run_tests.py
+
+      - name: Package Standalone Windows Executable
+        run: |
+          python -m PyInstaller --noconfirm --onedir --name ASTHA_ERP --windowed --paths . desktop/custom_tkinter_app.py
+
+      - name: Upload Desktop Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ASTHA_ERP_Windows_Executable
+          path: dist/ASTHA_ERP/
