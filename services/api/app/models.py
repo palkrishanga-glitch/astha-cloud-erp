@@ -431,6 +431,34 @@ class PurchaseReturnModel(Base):
     created_by = Column(String(36), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+class GstHsnMaster(Base):
+    __tablename__ = "gst_hsn_master"
+    id = Column(Integer, primary_key=True, index=True)
+    hsn_code = Column(String(10), unique=True, nullable=False, index=True)
+    description = Column(Text, nullable=True)
+    gst_rate = Column(Numeric(5, 2), nullable=False)
+    cgst_rate = Column(Numeric(5, 2), default=0.00)
+    sgst_rate = Column(Numeric(5, 2), default=0.00)
+    igst_rate = Column(Numeric(5, 2), default=0.00)
+
+class GstRegister(Base):
+    __tablename__ = "gst_registers"
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    date = Column(Date, nullable=False, index=True)
+    voucher_no = Column(String(50), nullable=False, index=True)
+    voucher_type = Column(String(30), nullable=False) # SALE, PURCHASE, SALES_RETURN, PURCHASE_RETURN
+    party_id = Column(String(36), ForeignKey("parties.id"), nullable=True)
+    gstin = Column(String(15), nullable=True)
+    state_code = Column(String(5), nullable=True)
+    hsn_code = Column(String(10), nullable=False)
+    taxable_amount = Column(Numeric(12, 2), nullable=False)
+    cgst = Column(Numeric(12, 2), default=0.00)
+    sgst = Column(Numeric(12, 2), default=0.00)
+    igst = Column(Numeric(12, 2), default=0.00)
+    cess = Column(Numeric(12, 2), default=0.00)
+    total_tax = Column(Numeric(12, 2), nullable=False)
+    is_input = Column(Boolean, default=False) # True = Input Credit (Purchase), False = Output Liability (Sale)
+
 class Account(Base):
     __tablename__ = "accounts"
     id = Column(Integer, primary_key=True, index=True)

@@ -1,3 +1,4 @@
+import re
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
@@ -5,7 +6,10 @@ from typing import List, Optional
 from datetime import date, datetime
 
 from ..database import get_db
-from ..models import Account, Voucher, VoucherItem, PartyLedger, StockLedger, AuditLog
+from ..models import (
+    Account, Voucher, VoucherItem, PartyLedger, StockLedger, AuditLog,
+    SalesInvoiceModel, SalesInvoiceItem, PurchaseInvoiceModel, PurchaseInvoiceItem, GstRegister
+)
 from utils.excel_export import export_data_to_excel
 
 router = APIRouter(prefix="/reports", tags=["Accounting & Financial Reports"])
@@ -24,6 +28,13 @@ class CreateVoucherSchema(BaseModel):
     narration: str
     items: List[VoucherItemInput]
     created_by: str = "SYSTEM_ADMIN"
+
+def validate_gstin_format(gstin: str) -> bool:
+    """Validates 15-digit Indian GSTIN format (e.g., 21AAAAA0000A1Z5)."""
+    if not gstin or len(gstin) != 15:
+        return False
+    pattern = r"^\d{2}[A-Z]{5}\d{4}[A-Z]{1}[A-Z\d]{1}[Z]{1}[A-Z\d]{1}$"
+    return bool(re.match(pattern, gstin.upper()))
 
 def generate_next_voucher_no(db: Session, v_type: str) -> str:
     prefix_map = {
@@ -48,7 +59,6 @@ def get_or_create_account(db: Session, code: str, name: str, acct_type: str) -> 
 
 @router.post("/vouchers", status_code=status.HTTP_201_CREATED)
 def create_accounting_voucher(payload: CreateVoucherSchema, db: Session = Depends(get_db)):
-    # Ensure default cash & bank accounts exist
     get_or_create_account(db, "1001", "Cash Account", "ASSET")
     get_or_create_account(db, "1002", "Bank Account", "ASSET")
 
@@ -97,18 +107,7 @@ def create_accounting_voucher(payload: CreateVoucherSchema, db: Session = Depend
         )
         db.add(vi)
 
-    audit = AuditLog(
-        user_id=payload.created_by,
-        module="Accounting & Financials",
-        action="CREATE_VOUCHER",
-        table_name="vouchers",
-        record_id=v.id,
-        new_value=f"Created {payload.voucher_type} Voucher {v.voucher_no} (Rs {tot_debit})",
-        status="SUCCESS"
-    )
-    db.add(audit)
     db.commit()
-
     return {
         "status": "SUCCESS",
         "voucher_no": v.voucher_no,
@@ -214,75 +213,130 @@ def get_balance_sheet(db: Session = Depends(get_db)):
         "liabilities": liabilities
     }
 
-@router.get("/cash-book")
-def get_cash_book(db: Session = Depends(get_db)):
-    cash_acct = get_or_create_account(db, "1001", "Cash Account", "ASSET")
+@router.get("/gstr-1")
+def get_gstr1_report(db: Session = Depends(get_db)):
+    """GSTR-1 Outward Sales Tax Return Statement."""
+    invoices = db.query(SalesInvoiceModel).filter(SalesInvoiceModel.status == "APPROVED").all()
+    b2b = []
+    b2c = []
+    tot_taxable = 0.00
+    tot_cgst = 0.00
+    tot_sgst = 0.00
 
-    items = db.query(VoucherItem).filter(VoucherItem.account_id == cash_acct.id).all()
-    txs = []
-    bal = 0.00
+    for inv in invoices:
+        t_amt = float(inv.subtotal)
+        c_amt = float(inv.cgst_total)
+        s_amt = float(inv.sgst_total)
+        tot_taxable += t_amt
+        tot_cgst += c_amt
+        tot_sgst += s_amt
 
-    for i in items:
-        d = float(i.debit)
-        c = float(i.credit)
-        bal += d - c
-        txs.append({
-            "voucher_no": i.voucher.voucher_no if i.voucher else "N/A",
-            "date": str(i.voucher.voucher_date) if i.voucher else "N/A",
-            "narration": i.narration,
-            "cash_in": d,
-            "cash_out": c,
-            "running_balance": round(bal, 2)
+        row = {
+            "invoice_no": inv.invoice_no,
+            "invoice_date": str(inv.invoice_date),
+            "customer_name": inv.party.business_name if inv.party else "Cash Customer",
+            "gstin": inv.party.gstin if inv.party and inv.party.gstin else "URP",
+            "taxable_value": t_amt,
+            "cgst": c_amt,
+            "sgst": s_amt,
+            "total_tax": c_amt + s_amt,
+            "invoice_value": float(inv.grand_total)
+        }
+        if inv.party and inv.party.gstin:
+            b2b.append(row)
+        else:
+            b2c.append(row)
+
+    return {
+        "total_taxable_value": round(tot_taxable, 2),
+        "total_cgst_output": round(tot_cgst, 2),
+        "total_sgst_output": round(tot_sgst, 2),
+        "total_output_tax_liability": round(tot_cgst + tot_sgst, 2),
+        "b2b_invoices": b2b,
+        "b2c_invoices": b2c
+    }
+
+@router.get("/gstr-2")
+def get_gstr2_report(db: Session = Depends(get_db)):
+    """GSTR-2 Inward Purchase Input Tax Credit Statement."""
+    purchases = db.query(PurchaseInvoiceModel).filter(PurchaseInvoiceModel.status == "APPROVED").all()
+    itc_rows = []
+    tot_taxable = 0.00
+    tot_cgst_itc = 0.00
+    tot_sgst_itc = 0.00
+
+    for pur in purchases:
+        t_amt = float(pur.subtotal)
+        c_amt = float(pur.cgst_total)
+        s_amt = float(pur.sgst_total)
+        tot_taxable += t_amt
+        tot_cgst_itc += c_amt
+        tot_sgst_itc += s_amt
+
+        itc_rows.append({
+            "bill_number": pur.bill_number,
+            "supplier_invoice_no": pur.supplier_invoice_no,
+            "bill_date": str(pur.bill_date),
+            "supplier_name": pur.supplier.business_name if pur.supplier else "N/A",
+            "supplier_gstin": pur.supplier.gstin if pur.supplier and pur.supplier.gstin else "URP",
+            "taxable_value": t_amt,
+            "cgst_itc": c_amt,
+            "sgst_itc": s_amt,
+            "total_itc_available": c_amt + s_amt,
+            "grand_total": float(pur.grand_total)
         })
 
     return {
-        "current_cash_balance": round(bal, 2),
-        "transactions": txs
+        "total_taxable_purchases": round(tot_taxable, 2),
+        "total_cgst_itc_claimed": round(tot_cgst_itc, 2),
+        "total_sgst_itc_claimed": round(tot_sgst_itc, 2),
+        "total_input_tax_credit": round(tot_cgst_itc + tot_sgst_itc, 2),
+        "inward_supplies": itc_rows
     }
 
-@router.get("/bank-book")
-def get_bank_book(db: Session = Depends(get_db)):
-    bank_acct = get_or_create_account(db, "1002", "Bank Account", "ASSET")
+@router.get("/gstr-3b")
+def get_gstr3b_report(db: Session = Depends(get_db)):
+    """
+    GSTR-3B Monthly Net Tax Summary:
+    Net GST Payable = Total Output Tax Liability (GSTR-1) - Total Input Tax Credit (GSTR-2).
+    """
+    g1 = get_gstr1_report(db)
+    g2 = get_gstr2_report(db)
 
-    items = db.query(VoucherItem).filter(VoucherItem.account_id == bank_acct.id).all()
-    txs = []
-    bal = 0.00
-
-    for i in items:
-        d = float(i.debit)
-        c = float(i.credit)
-        bal += d - c
-        txs.append({
-            "voucher_no": i.voucher.voucher_no if i.voucher else "N/A",
-            "date": str(i.voucher.voucher_date) if i.voucher else "N/A",
-            "narration": i.narration,
-            "deposit": d,
-            "withdrawal": c,
-            "running_balance": round(bal, 2)
-        })
+    out_liability = g1["total_output_tax_liability"]
+    input_itc = g2["total_input_tax_credit"]
+    net_payable = max(0.00, out_liability - input_itc)
+    itc_balance_carried_forward = max(0.00, input_itc - out_liability)
 
     return {
-        "current_bank_balance": round(bal, 2),
-        "transactions": txs
+        "output_tax_liability": out_liability,
+        "input_tax_credit_available": input_itc,
+        "net_gst_payable_cash": round(net_payable, 2),
+        "excess_itc_carried_forward": round(itc_balance_carried_forward, 2)
     }
 
-@router.get("/day-book")
-def get_day_book(day: Optional[date] = None, db: Session = Depends(get_db)):
-    target_date = day or date.today()
-    vouchers = db.query(Voucher).filter(Voucher.voucher_date == target_date).all()
-    
-    res = []
-    for v in vouchers:
-        res.append({
-            "voucher_no": v.voucher_no,
-            "voucher_type": v.voucher_type,
-            "narration": v.narration,
-            "total_amount": float(v.total_amount),
-            "created_by": v.created_by
-        })
+@router.get("/hsn-summary")
+def get_hsn_summary(db: Session = Depends(get_db)):
+    """Returns HSN-wise tax summary across all sales items."""
+    items = db.query(SalesInvoiceItem).all()
+    hsn_map = {}
 
-    return {
-        "date": str(target_date),
-        "total_transactions": len(vouchers),
-        "day_book": res
-    }
+    for item in items:
+        hsn = item.hsn_code
+        if hsn not in hsn_map:
+            hsn_map[hsn] = {
+                "hsn_code": hsn,
+                "total_quantity": 0.00,
+                "taxable_amount": 0.00,
+                "cgst_amount": 0.00,
+                "sgst_amount": 0.00,
+                "total_tax": 0.00
+            }
+
+        hsn_map[hsn]["total_quantity"] += float(item.quantity)
+        hsn_map[hsn]["taxable_amount"] += float(item.taxable_amount)
+        hsn_map[hsn]["cgst_amount"] += float(item.cgst_amount)
+        hsn_map[hsn]["sgst_amount"] += float(item.sgst_amount)
+        hsn_map[hsn]["total_tax"] += float(item.cgst_amount) + float(item.sgst_amount)
+
+    return list(hsn_map.values())
