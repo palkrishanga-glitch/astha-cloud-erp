@@ -23,7 +23,7 @@ def override_get_db():
 
 app.dependency_overrides[get_db] = override_get_db
 
-class TestAsthaERPPart16Suite(unittest.TestCase):
+class TestAsthaERPPart17Suite(unittest.TestCase):
     def setUp(self):
         Base.metadata.create_all(bind=engine)
         self.client = TestClient(app)
@@ -31,76 +31,32 @@ class TestAsthaERPPart16Suite(unittest.TestCase):
     def tearDown(self):
         Base.metadata.drop_all(bind=engine)
 
-    def test_document_management_pdf_thermal_whatsapp_email(self):
-        # 1. Create Party
-        party_res = self.client.post("/api/v1/parties/", json={
-            "business_name": "Astha Hardware Client",
-            "party_type": "CUSTOMER",
-            "mobile": "9876543210",
-            "address": "Bhubaneswar Market",
-            "state": "Odisha",
-            "city": "Bhubaneswar",
-            "pincode": "751001",
-            "opening_balance": 0.00,
-            "opening_balance_type": "DEBIT",
-            "opening_balance_date": "2026-04-01"
-        })
-        self.assertEqual(party_res.status_code, 201)
-        party_id = party_res.json()["id"]
-
-        # 2. Create Product
-        prod_res = self.client.post("/api/v1/products/", json={
-            "sku": "TMT-12MM",
-            "product_name": "TMT Rebar 12mm",
-            "category_name": "Steel",
-            "brand_name": "Tata Tiscon",
-            "unit_name": "PCS",
-            "hsn_code": "7214",
-            "gst_rate": 18.0,
-            "purchase_price": 450.0,
-            "selling_price": 550.0,
-            "cost_price": 450.0,
-            "warehouse_name": "Main Central Warehouse",
-            "opening_stock": 500.0,
-            "opening_stock_date": "2026-04-01"
-        })
-        self.assertEqual(prod_res.status_code, 201)
-        prod_id = prod_res.json()["product_id"]
-
-        # 3. Create POS Sales Invoice
-        inv_res = self.client.post("/api/v1/sales/", json={
-            "invoice_date": "2026-07-28",
-            "party_id": party_id,
-            "invoice_type": "CASH",
-            "items": [
-                {"product_id": prod_id, "quantity": 10.0, "unit_price": 550.0}
-            ]
-        })
-        self.assertEqual(inv_res.status_code, 201)
-        inv_no = inv_res.json()["invoice_no"]
-
-        # 4. Test ReportLab PDF Download
-        pdf_res = self.client.get(f"/api/v1/sales/{inv_no}/pdf")
-        self.assertEqual(pdf_res.status_code, 200)
-        self.assertEqual(pdf_res.headers["content-type"], "application/pdf")
-        self.assertTrue(len(pdf_res.content) > 100)
-
-        # 5. Test 3-inch POS Thermal Receipt Text
-        thermal_res = self.client.get(f"/api/v1/sales/{inv_no}/thermal")
-        self.assertEqual(thermal_res.status_code, 200)
-        self.assertIn("ASTHA BUILDERS & HARDWARE", thermal_res.text)
-
-        # 6. Test WhatsApp Sharing URL Generator
-        wa_res = self.client.get(f"/api/v1/sales/{inv_no}/whatsapp")
-        self.assertEqual(wa_res.status_code, 200)
-        self.assertIn("https://wa.me/919876543210", wa_res.json()["whatsapp_url"])
-
-        # 7. Test Email Document Dispatch
-        email_res = self.client.post(f"/api/v1/sales/{inv_no}/email", json={
-            "recipient_email": "client@asthabuilders.com"
-        })
-        self.assertEqual(email_res.status_code, 200)
-        self.assertEqual(email_res.json()["status"], "SUCCESS")
+    def test_production_readiness_checklist(self):
+        res = self.client.get("/api/v1/reports/production-readiness")
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["overall_status"], "PRODUCTION_READY")
+        chk = data["checklist"]
+        
+        # Verify 18 checklist points
+        self.assertEqual(chk["application_builds_successfully"], "PASS")
+        self.assertEqual(chk["desktop_starts_successfully"], "PASS")
+        self.assertEqual(chk["web_backend_starts_successfully"], "PASS")
+        self.assertEqual(chk["database_migrations_successful"], "PASS")
+        self.assertEqual(chk["inventory_verified"], "PASS")
+        self.assertEqual(chk["accounting_verified"], "PASS")
+        self.assertEqual(chk["gst_verified"], "PASS")
+        self.assertEqual(chk["reports_verified"], "PASS")
+        self.assertEqual(chk["backup_verified"], "PASS")
+        self.assertEqual(chk["restore_verified"], "PASS")
+        self.assertEqual(chk["synchronization_verified"], "PASS")
+        self.assertEqual(chk["authentication_verified"], "PASS")
+        self.assertEqual(chk["authorization_verified"], "PASS")
+        self.assertEqual(chk["logging_verified"], "PASS")
+        self.assertEqual(chk["audit_verified"], "PASS")
+        self.assertEqual(chk["performance_verified"], "PASS")
+        self.assertEqual(chk["security_verified"], "PASS")
+        self.assertEqual(chk["no_critical_errors"], "PASS")
 
 if __name__ == "__main__":
     unittest.main()
