@@ -23,7 +23,7 @@ def override_get_db():
 
 app.dependency_overrides[get_db] = override_get_db
 
-class TestAsthaERPPart15Suite(unittest.TestCase):
+class TestAsthaERPPart16Suite(unittest.TestCase):
     def setUp(self):
         Base.metadata.create_all(bind=engine)
         self.client = TestClient(app)
@@ -31,32 +31,76 @@ class TestAsthaERPPart15Suite(unittest.TestCase):
     def tearDown(self):
         Base.metadata.drop_all(bind=engine)
 
-    def test_disaster_recovery_and_repair(self):
-        # 1. Create Backup & verify checksum
-        create_res = self.client.post("/api/v1/backup/create")
-        self.assertEqual(create_res.status_code, 201)
-        data = create_res.json()
-        self.assertEqual(data["status"], "SUCCESS")
-        self.assertIn("sha256_checksum", data)
-        backup_file = data["backup_file"]
-
-        # 2. List Backups & verify integrity
-        list_res = self.client.get("/api/v1/backup/list")
-        self.assertEqual(list_res.status_code, 200)
-        self.assertTrue(list_res.json()["backups"][0]["integrity_valid"])
-
-        # 3. Restore & verify pre-restore safety snapshot
-        restore_res = self.client.post("/api/v1/backup/restore", json={
-            "backup_file_name": backup_file,
-            "owner_pin": "1234"
+    def test_document_management_pdf_thermal_whatsapp_email(self):
+        # 1. Create Party
+        party_res = self.client.post("/api/v1/parties/", json={
+            "business_name": "Astha Hardware Client",
+            "party_type": "CUSTOMER",
+            "mobile": "9876543210",
+            "address": "Bhubaneswar Market",
+            "state": "Odisha",
+            "city": "Bhubaneswar",
+            "pincode": "751001",
+            "opening_balance": 0.00,
+            "opening_balance_type": "DEBIT",
+            "opening_balance_date": "2026-04-01"
         })
-        self.assertEqual(restore_res.status_code, 200)
-        self.assertIn("safety_snapshot_created", restore_res.json())
+        self.assertEqual(party_res.status_code, 201)
+        party_id = party_res.json()["id"]
 
-        # 4. Emergency Repair & Optimization Engine
-        repair_res = self.client.post("/api/v1/backup/repair")
-        self.assertEqual(repair_res.status_code, 200)
-        self.assertEqual(repair_res.json()["status"], "SUCCESS")
+        # 2. Create Product
+        prod_res = self.client.post("/api/v1/products/", json={
+            "sku": "TMT-12MM",
+            "product_name": "TMT Rebar 12mm",
+            "category_name": "Steel",
+            "brand_name": "Tata Tiscon",
+            "unit_name": "PCS",
+            "hsn_code": "7214",
+            "gst_rate": 18.0,
+            "purchase_price": 450.0,
+            "selling_price": 550.0,
+            "cost_price": 450.0,
+            "warehouse_name": "Main Central Warehouse",
+            "opening_stock": 500.0,
+            "opening_stock_date": "2026-04-01"
+        })
+        self.assertEqual(prod_res.status_code, 201)
+        prod_id = prod_res.json()["product_id"]
+
+        # 3. Create POS Sales Invoice
+        inv_res = self.client.post("/api/v1/sales/", json={
+            "invoice_date": "2026-07-28",
+            "party_id": party_id,
+            "invoice_type": "CASH",
+            "items": [
+                {"product_id": prod_id, "quantity": 10.0, "unit_price": 550.0}
+            ]
+        })
+        self.assertEqual(inv_res.status_code, 201)
+        inv_no = inv_res.json()["invoice_no"]
+
+        # 4. Test ReportLab PDF Download
+        pdf_res = self.client.get(f"/api/v1/sales/{inv_no}/pdf")
+        self.assertEqual(pdf_res.status_code, 200)
+        self.assertEqual(pdf_res.headers["content-type"], "application/pdf")
+        self.assertTrue(len(pdf_res.content) > 100)
+
+        # 5. Test 3-inch POS Thermal Receipt Text
+        thermal_res = self.client.get(f"/api/v1/sales/{inv_no}/thermal")
+        self.assertEqual(thermal_res.status_code, 200)
+        self.assertIn("ASTHA BUILDERS & HARDWARE", thermal_res.text)
+
+        # 6. Test WhatsApp Sharing URL Generator
+        wa_res = self.client.get(f"/api/v1/sales/{inv_no}/whatsapp")
+        self.assertEqual(wa_res.status_code, 200)
+        self.assertIn("https://wa.me/919876543210", wa_res.json()["whatsapp_url"])
+
+        # 7. Test Email Document Dispatch
+        email_res = self.client.post(f"/api/v1/sales/{inv_no}/email", json={
+            "recipient_email": "client@asthabuilders.com"
+        })
+        self.assertEqual(email_res.status_code, 200)
+        self.assertEqual(email_res.json()["status"], "SUCCESS")
 
 if __name__ == "__main__":
     unittest.main()

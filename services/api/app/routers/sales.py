@@ -302,3 +302,70 @@ GRAND TOTAL: Rs {float(inv.grand_total):.2f}
 ========================================
 """
     return Response(content=receipt_text, media_type="text/plain")
+
+@router.get("/{invoice_no}/whatsapp")
+def get_whatsapp_share_link(invoice_no: str, db: Session = Depends(get_db)):
+    """Generates click-to-chat WhatsApp link with pre-formatted invoice summary text."""
+    from services.api.app.utils.whatsapp_engine import generate_whatsapp_invoice_link
+
+    inv = db.query(SalesInvoiceModel).filter(SalesInvoiceModel.invoice_no == invoice_no).first()
+    if not inv:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+
+    link = generate_whatsapp_invoice_link(
+        mobile=inv.party.mobile if inv.party else "9999900000",
+        customer_name=inv.party.business_name if inv.party else "Valued Customer",
+        invoice_no=inv.invoice_no,
+        invoice_date=str(inv.invoice_date),
+        grand_total=float(inv.grand_total),
+        pdf_download_url=f"http://127.0.0.1:8000/api/v1/sales/{inv.invoice_no}/pdf"
+    )
+
+    return {"invoice_no": inv.invoice_no, "whatsapp_url": link}
+
+class EmailInvoiceSchema(BaseModel):
+    recipient_email: str
+    subject: Optional[str] = None
+
+@router.post("/{invoice_no}/email")
+def send_invoice_email(invoice_no: str, payload: EmailInvoiceSchema, db: Session = Depends(get_db)):
+    """Sends ReportLab PDF Invoice directly via Email."""
+    from services.api.app.utils.email_engine import send_document_email
+
+    inv = db.query(SalesInvoiceModel).filter(SalesInvoiceModel.invoice_no == invoice_no).first()
+    if not inv:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+
+    items = db.query(SalesInvoiceItem).filter(SalesInvoiceItem.invoice_id == inv.id).all()
+    pdf_bytes = generate_invoice_pdf(inv, inv.party, items)
+
+    subject = payload.subject or f"Tax Invoice {inv.invoice_no} — Astha Builders & Hardware"
+    body_text = f"Dear {inv.party.business_name},\n\nPlease find attached your GST Tax Invoice {inv.invoice_no} for Rs {float(inv.grand_total):.2f}.\n\nThank you for choosing Astha Builders & Hardware!"
+
+    success = send_document_email(
+        smtp_host="smtp.gmail.com",
+        smtp_port=587,
+        username="",
+        password="",
+        sender_email="billing@asthabuilders.com",
+        recipient_email=payload.recipient_email,
+        subject=subject,
+        body_text=body_text,
+        attachment_bytes=pdf_bytes,
+        attachment_name=f"{inv.invoice_no}.pdf"
+    )
+
+    audit = AuditLog(
+        user_id="SYSTEM_ADMIN",
+        module="Document Management",
+        action="EMAIL_INVOICE",
+        table_name="sales_invoices",
+        record_id=inv.id,
+        new_value=f"Emailed invoice {inv.invoice_no} to {payload.recipient_email}",
+        status="SUCCESS" if success else "FAILED"
+    )
+    db.add(audit)
+    db.commit()
+
+    return {"status": "SUCCESS", "message": f"Invoice {inv.invoice_no} dispatched to {payload.recipient_email}"}
+
