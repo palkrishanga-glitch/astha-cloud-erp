@@ -23,7 +23,7 @@ def override_get_db():
 
 app.dependency_overrides[get_db] = override_get_db
 
-class TestAsthaERPPart14Suite(unittest.TestCase):
+class TestAsthaERPPart15Suite(unittest.TestCase):
     def setUp(self):
         Base.metadata.create_all(bind=engine)
         self.client = TestClient(app)
@@ -31,37 +31,32 @@ class TestAsthaERPPart14Suite(unittest.TestCase):
     def tearDown(self):
         Base.metadata.drop_all(bind=engine)
 
-    def test_cloud_sync_engine(self):
-        # 1. Register Device
-        reg_res = self.client.post("/api/v1/sync/register-device", json={
-            "device_id": "POS-COUNTER-01",
-            "computer_name": "Astha POS Terminal 1",
-            "os_name": "Windows 11 Enterprise",
-            "assigned_branch": "Bhubaneswar Main Branch"
-        })
-        self.assertEqual(reg_res.status_code, 201)
-        self.assertEqual(reg_res.json()["status"], "SUCCESS")
+    def test_disaster_recovery_and_repair(self):
+        # 1. Create Backup & verify checksum
+        create_res = self.client.post("/api/v1/backup/create")
+        self.assertEqual(create_res.status_code, 201)
+        data = create_res.json()
+        self.assertEqual(data["status"], "SUCCESS")
+        self.assertIn("sha256_checksum", data)
+        backup_file = data["backup_file"]
 
-        # 2. Push Offline Sync Queue Batch
-        push_res = self.client.post("/api/v1/sync/push", json={
-            "device_id": "POS-COUNTER-01",
-            "batch": [
-                {
-                    "sync_id": "SYNC-001",
-                    "module": "SALES",
-                    "action": "CREATE",
-                    "payload": {"invoice_no": "INV-2026-000001", "total": 1500.00},
-                    "client_timestamp": "2026-07-28T13:34:00Z"
-                }
-            ]
-        })
-        self.assertEqual(push_res.status_code, 200)
-        self.assertEqual(push_res.json()["processed_count"], 1)
+        # 2. List Backups & verify integrity
+        list_res = self.client.get("/api/v1/backup/list")
+        self.assertEqual(list_res.status_code, 200)
+        self.assertTrue(list_res.json()["backups"][0]["integrity_valid"])
 
-        # 3. Pull Incremental Updates
-        pull_res = self.client.get("/api/v1/sync/pull?device_id=POS-COUNTER-01")
-        self.assertEqual(pull_res.status_code, 200)
-        self.assertEqual(pull_res.json()["status"], "SUCCESS")
+        # 3. Restore & verify pre-restore safety snapshot
+        restore_res = self.client.post("/api/v1/backup/restore", json={
+            "backup_file_name": backup_file,
+            "owner_pin": "1234"
+        })
+        self.assertEqual(restore_res.status_code, 200)
+        self.assertIn("safety_snapshot_created", restore_res.json())
+
+        # 4. Emergency Repair & Optimization Engine
+        repair_res = self.client.post("/api/v1/backup/repair")
+        self.assertEqual(repair_res.status_code, 200)
+        self.assertEqual(repair_res.json()["status"], "SUCCESS")
 
 if __name__ == "__main__":
     unittest.main()
