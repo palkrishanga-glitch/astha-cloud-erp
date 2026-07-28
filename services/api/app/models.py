@@ -356,7 +356,7 @@ class PurchaseOrder(Base):
     warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False)
     expected_delivery_date = Column(Date, nullable=True)
     total_amount = Column(Numeric(12, 2), nullable=False)
-    status = Column(String(20), default='APPROVED') # DRAFT, APPROVED, PARTIALLY_RECEIVED, COMPLETED, CANCELLED
+    status = Column(String(20), default='APPROVED')
     created_by = Column(String(36), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -374,7 +374,6 @@ class GoodsReceiptNote(Base):
 
 class PurchaseInvoiceModel(Base):
     __tablename__ = "purchase_invoices"
-    
     id = Column(String(36), primary_key=True, default=generate_uuid)
     bill_number = Column(String(50), unique=True, nullable=False, index=True)
     supplier_invoice_no = Column(String(50), nullable=False, index=True)
@@ -382,19 +381,16 @@ class PurchaseInvoiceModel(Base):
     due_date = Column(Date, nullable=True)
     supplier_id = Column(String(36), ForeignKey("parties.id"), nullable=False, index=True)
     warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False)
-    
     subtotal = Column(Numeric(12, 2), nullable=False)
     discount_amount = Column(Numeric(12, 2), default=0.00)
     cgst_total = Column(Numeric(12, 2), default=0.00)
     sgst_total = Column(Numeric(12, 2), default=0.00)
     igst_total = Column(Numeric(12, 2), default=0.00)
     grand_total = Column(Numeric(12, 2), nullable=False)
-    
     payment_mode = Column(String(20), default='BANK_TRANSFER')
-    payment_status = Column(String(20), default='UNPAID') # UNPAID, PARTIAL, PAID
+    payment_status = Column(String(20), default='UNPAID')
     amount_paid = Column(Numeric(12, 2), default=0.00)
     balance_due = Column(Numeric(12, 2), default=0.00)
-    
     remarks = Column(Text, nullable=True)
     status = Column(String(20), default='APPROVED')
     created_by = Column(String(36), nullable=False)
@@ -406,7 +402,6 @@ class PurchaseInvoiceModel(Base):
 
 class PurchaseInvoiceItem(Base):
     __tablename__ = "purchase_invoice_items"
-    
     id = Column(String(36), primary_key=True, default=generate_uuid)
     purchase_id = Column(String(36), ForeignKey("purchase_invoices.id"), nullable=False, index=True)
     product_id = Column(String(36), ForeignKey("products.id"), nullable=False, index=True)
@@ -426,7 +421,6 @@ class PurchaseInvoiceItem(Base):
 
 class PurchaseReturnModel(Base):
     __tablename__ = "purchase_returns"
-    
     id = Column(String(36), primary_key=True, default=generate_uuid)
     return_no = Column(String(50), unique=True, nullable=False, index=True)
     return_date = Column(Date, nullable=False)
@@ -470,6 +464,7 @@ class VoucherItem(Base):
     narration = Column(Text, nullable=True)
 
     voucher = relationship("Voucher", back_populates="items")
+    account = relationship("Account")
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"
