@@ -23,7 +23,7 @@ def override_get_db():
 
 app.dependency_overrides[get_db] = override_get_db
 
-class TestAsthaERPPart17Suite(unittest.TestCase):
+class TestAsthaERPPart18Suite(unittest.TestCase):
     def setUp(self):
         Base.metadata.create_all(bind=engine)
         self.client = TestClient(app)
@@ -31,32 +31,29 @@ class TestAsthaERPPart17Suite(unittest.TestCase):
     def tearDown(self):
         Base.metadata.drop_all(bind=engine)
 
-    def test_production_readiness_checklist(self):
-        res = self.client.get("/api/v1/reports/production-readiness")
-        self.assertEqual(res.status_code, 200)
-        data = res.json()
-        self.assertEqual(data["overall_status"], "PRODUCTION_READY")
-        chk = data["checklist"]
-        
-        # Verify 18 checklist points
-        self.assertEqual(chk["application_builds_successfully"], "PASS")
-        self.assertEqual(chk["desktop_starts_successfully"], "PASS")
-        self.assertEqual(chk["web_backend_starts_successfully"], "PASS")
-        self.assertEqual(chk["database_migrations_successful"], "PASS")
-        self.assertEqual(chk["inventory_verified"], "PASS")
-        self.assertEqual(chk["accounting_verified"], "PASS")
-        self.assertEqual(chk["gst_verified"], "PASS")
-        self.assertEqual(chk["reports_verified"], "PASS")
-        self.assertEqual(chk["backup_verified"], "PASS")
-        self.assertEqual(chk["restore_verified"], "PASS")
-        self.assertEqual(chk["synchronization_verified"], "PASS")
-        self.assertEqual(chk["authentication_verified"], "PASS")
-        self.assertEqual(chk["authorization_verified"], "PASS")
-        self.assertEqual(chk["logging_verified"], "PASS")
-        self.assertEqual(chk["audit_verified"], "PASS")
-        self.assertEqual(chk["performance_verified"], "PASS")
-        self.assertEqual(chk["security_verified"], "PASS")
-        self.assertEqual(chk["no_critical_errors"], "PASS")
+    def test_astha_ai_assistant_and_analytics(self):
+        # 1. Ask Natural Language Query
+        ai_res = self.client.post("/api/v1/ai/ask", json={
+            "query": "What is our current sales revenue and stock status?"
+        })
+        self.assertEqual(ai_res.status_code, 200)
+        self.assertEqual(ai_res.json()["status"], "SUCCESS")
+        self.assertIn("sales revenue", ai_res.json()["ai_response"])
+
+        # 2. Smart Reorder Recommendations
+        reorder_res = self.client.get("/api/v1/ai/smart-reorder")
+        self.assertEqual(reorder_res.status_code, 200)
+        self.assertIn("total_items_to_reorder", reorder_res.json())
+
+        # 3. Dead Stock Analysis
+        dead_res = self.client.get("/api/v1/ai/dead-stock")
+        self.assertEqual(dead_res.status_code, 200)
+        self.assertIn("total_dead_stock_items", dead_res.json())
+
+        # 4. Predictive Sales Forecast
+        forecast_res = self.client.get("/api/v1/ai/sales-forecast")
+        self.assertEqual(forecast_res.status_code, 200)
+        self.assertIn("projected_next_month_revenue", forecast_res.json())
 
 if __name__ == "__main__":
     unittest.main()

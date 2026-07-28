@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from .app.database import engine, Base
-from .app.routers import auth, parties, inventory, sales, purchases, reports, search, sync, backup
+from .app.routers import auth, parties, inventory, sales, purchases, reports, search, sync, backup, ai_assistant
 
 # Initialize Database Tables
 Base.metadata.create_all(bind=engine)
@@ -32,6 +32,7 @@ app.include_router(reports.router, prefix="/api/v1")
 app.include_router(search.router, prefix="/api/v1")
 app.include_router(sync.router, prefix="/api/v1")
 app.include_router(backup.router, prefix="/api/v1")
+app.include_router(ai_assistant.router, prefix="/api/v1")
 
 @app.get("/", response_class=HTMLResponse)
 def root_web_ui():
